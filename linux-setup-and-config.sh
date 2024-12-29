@@ -239,7 +239,7 @@ logMessage "Cloning 'dotfiles' repository and executing installer..."
 dotfilesRepo="https://github.com/norsemangrey/.dotfiles.git"
 dotfilesInstaller="install-linux.sh"
 
-# Clone and execute the 'dotfiles' repository
+# Clone and execute the 'dotfiles' repository, creating symlinks for configurations files in the repo
 "${externalCloneAndExecute}" --url "${dotfilesRepo}" --executable "${dotfilesInstaller}" --root "${HOME}" ${debug:+-d} ${verbose:+-v}
 
 # Set ZSH as the default shell if ZSH environment file exists
