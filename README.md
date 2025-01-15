@@ -35,7 +35,7 @@ The `linux-setup-deployer` repository provides automation scripts to streamline 
 1. **Clone the Repository**
 
    ```bash
-   git clone --recurse-submodules https://github.com/your-repo/linux-setup-deployer.git
+   git clone --recurse-submodules https://github.com/norsemangrey/linux-setup-deployer.git
    cd linux-setup-deployer
    ```
 
