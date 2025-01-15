@@ -237,7 +237,7 @@ logMessage "Cloning 'dotfiles' repository and executing installer..."
 
 # Set URL and executable for the 'dotfiles' repository
 dotfilesRepo="https://github.com/norsemangrey/.dotfiles.git"
-dotfilesInstaller="install-linux.sh"
+dotfilesInstaller="deploy-config-linux.sh"
 
 # Clone and execute the 'dotfiles' repository, creating symlinks for configurations files in the repo
 "${externalCloneAndExecute}" --url "${dotfilesRepo}" --executable "${dotfilesInstaller}" --root "${HOME}" ${debug:+-d} ${verbose:+-v}
