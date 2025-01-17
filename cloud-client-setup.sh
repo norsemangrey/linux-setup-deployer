@@ -95,7 +95,7 @@ if ! command -v mount.davfs &> /dev/null; then
     logMessage "WebDav Client (davfs2) installed successfully." "INFO"
 
     # Add user to the davfs2 group
-    usermod -aG davfs2 "${username}"
+    sudo usermod -aG davfs2 "${username}"
 
 else
 
@@ -105,10 +105,10 @@ fi
 
 
 # Create a directory for the cloud storage
-mkdir "${cloudPath}"
+mkdir -p "${cloudPath}"
 
 # Create a directory for the davfs2 configuration
-mkdir $(dirname "${configFile}")
+mkdir -p $(dirname "${configFile}")
 
 # Copy the template secrets file to the davfs2 configuration directory
 sudo cp /etc/davfs2/secrets "${configFile}"
