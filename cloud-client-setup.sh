@@ -78,10 +78,10 @@ fi
 username="${USER}"
 
 # Set the path to the cloud storage directory
-cloudPath="/home/${username}/cloud"
+cloudPath="${HOME}/cloud"
 
 # Set the path to the DAVFS2 configuration file
-configFile="~/.config/davfs2/secrets"
+configFile="${HOME}/.config/davfs2/secrets"
 
 
 # Check and install DAVFS2 (mounts a WebDAV resource as a regular file system)
@@ -89,8 +89,8 @@ if ! command -v mount.davfs &> /dev/null; then
 
     logMessage "Installing WebDav Client (davfs2)..." "INFO"
 
-    # Installing DAVFS2
-    run sudo apt-get install -y davfs2
+    # Installing DAVFS2 (run non-interactively)
+    run DEBIAN_FRONTEND=noninteractive sudo apt-get install -y davfs2
 
     logMessage "WebDav Client (davfs2) installed successfully." "INFO"
 
@@ -121,7 +121,7 @@ chmod 600 "${configFile}"
 
 
 # Prompt the user for the WebDav entry or continue
-read -p "Do you want to make a new entry to the WebDav client (davfs2) configuration? (y/N): " confirm
+read -p "Do you want to make a new entry to the WebDav client (davfs2) configuration? (y/N): " 2>&1 confirm
 
 # Check the user's response
 if [[ "$confirm" =~ ^[Yy]$ ]]; then
