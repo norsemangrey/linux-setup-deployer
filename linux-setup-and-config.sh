@@ -233,6 +233,39 @@ else
 
 fi
 
+# Set external SSH installer script
+cloudClientInstaller=$(dirname "${BASH_SOURCE[0]}")"/cloud-client-setup.sh"
+
+# Execute external SSH setup script
+if [[ -f "${cloudClientInstaller}" ]]; then
+
+    logMessage "Set execute permissions on installer script (${cloudClientInstaller})." "DEBUG"
+
+    # Set permissions on the installer script
+    chmod +x "${cloudClientInstaller}"
+
+    logMessage "Executing Cloud client setup script (${cloudClientInstaller})..." "INFO"
+
+    # Execute SSH installer
+    "${cloudClientInstaller}" ${debug:+-d}
+
+    # Check for errors
+    if [[ $? -eq 0 ]]; then
+
+        logMessage "Cloud client setup script executed successfully." "INFO"
+
+    else
+
+        logMessage "Cloud client setup script failed." "ERROR"
+
+    fi
+
+else
+
+    logMessage "Cloud client setup script ($cloudClientInstaller) is not executable or not found." "ERROR"
+
+fi
+
 logMessage "Cloning 'dotfiles' repository and executing installer..."
 
 # Set URL and executable for the 'dotfiles' repository
