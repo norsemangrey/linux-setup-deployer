@@ -152,30 +152,45 @@ if [[ "$confirm" =~ ^[Yy]$ ]]; then
 
     done
 
-    # Create the configuration entry string
-    configEntry="${url} ${username} ${password}"
+    # Check if the URL already exists in the configuration file
+    if grep -q "^${url}" "${configFile}"; then
 
-    # Append the string to the configuration file
-    echo "${configEntry}" | tee -a "${configFile}" > /dev/null
+        logMessage "The URL '${url}' already exists in the configuration file (${configFile})." "INFO"
 
-    logMessage "Entry successfully added to configuration file ("${configFile}")." "INFO"
+    else
 
-    # Create the fstab entry string
-    fstabEntry="${url} ${cloudPath} davfs user,rw,auto 0 0"
+        # Create the configuration entry string
+        configEntry="${url} ${username} ${password}"
 
-    # Append the string to the fstab
-    echo "${fstabEntry}" | sudo tee -a /etc/fstab > /dev/null
+        # Append the string to the configuration file
+        echo "${configEntry}" | tee -a "${configFile}" > /dev/null
 
-    logMessage "Entry successfully added to fstab (/etc/fstab)." "INFO"
+        logMessage "Entry successfully added to configuration file (${configFile})." "INFO"
 
-    # Reload the systemd manager configuration
-    sudo systemctl daemon-reload
+    fi
 
-    # Confirm the operation
-    logMessage "Systemd manager configuration reloaded." "INFO"
+    # Check if the URL already exists in /etc/fstab
+    if grep -q "^${url}" /etc/fstab; then
 
-    # Mount the cloud storage directory
-    sudo mount "${cloudPath}"
+        logMessage "The URL '${url}' already exists in the fstab (/etc/fstab)." "INFO"
+
+    else
+
+        # Create the fstab entry string
+        fstabEntry="${url} ${cloudPath} davfs user,rw,auto 0 0"
+
+        # Append the string to the fstab
+        echo "${fstabEntry}" | sudo tee -a /etc/fstab > /dev/null
+
+        logMessage "Entry successfully added to fstab (/etc/fstab)." "INFO"
+
+        # Reload the systemd manager configuration
+        sudo systemctl daemon-reload
+
+        # Mount the cloud storage directory
+        sudo mount "${cloudPath}"
+
+    fi
 
 else
 
