@@ -128,15 +128,29 @@ read -p "Do you want to make a new entry to the WebDav client (davfs2) configura
 # Check the user's response
 if [[ "$confirm" =~ ^[Yy]$ ]]; then
 
-    # Proceed with the new entry
-    read -p "Enter the address (e.g., 'cloud.domain.com'): " 2>&1 address
-    read -p "Enter the username: " 2>&1 username
-    read -s -p "Enter the password: " 2>&1 password
+    while [[ ! "$retry" =~ ^[Yy]$ ]]; do
 
-    echo # Move to a new line after the password input
+        echo "To add a new WebDav folder mount, you need to provide the following information:"
 
-    # Set the full WebDav URL
-    url="https://${address}/remote.php/dav/files/${username}"
+        # Proceed with prompting the user for the WebDav information
+        read -p "Enter the address (e.g., 'cloud.domain.com'): " 2>&1 address
+        read -p "Enter the username: " 2>&1 username
+        read -s -p "Enter the password: " 2>&1 password
+
+        echo # Move to a new line after the password input
+
+        # Set the full WebDav URL
+        url="https://${address}/remote.php/dav/files/${username}"
+
+        echo "The following entry will be added to the WebDav client configuration:"
+        echo ""
+        echo "URL: ${url}"
+        echo "Username: ${username}"
+        echo "Password: ********"
+        echo ""
+        read "Do you want to continue or re-enter the information? (y/N): " 2>&1 retry
+
+    done
 
     # Create the configuration entry string
     configEntry="${url} ${username} ${password}"
