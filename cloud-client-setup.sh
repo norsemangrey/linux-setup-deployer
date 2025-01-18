@@ -136,13 +136,13 @@ if [[ "$confirm" =~ ^[Yy]$ ]]; then
     echo # Move to a new line after the password input
 
     # Set the full WebDav URL
-    url="https://$address/remote.php/dav/files/$username"
+    url="https://${address}/remote.php/dav/files/${username}"
 
     # Create the configuration entry string
-    configEntry= "${url} ${username} ${password}"
+    configEntry="${url} ${username} ${password}"
 
     # Append the string to the configuration file
-    echo "${configEntry}" >> "${configFile}"
+    echo "${configEntry}" | tee -a "${configFile}" > /dev/null
 
     logMessage "Entry successfully added to configuration file ("${configFile}")." "INFO"
 
@@ -150,7 +150,7 @@ if [[ "$confirm" =~ ^[Yy]$ ]]; then
     fstabEntry="${url} ${cloudPath} davfs user,rw,auto 0 0"
 
     # Append the string to the fstab
-    sudo echo "${fstabEntry}" >> /etc/fstab
+    echo "${fstabEntry}" | sudo tee -a /etc/fstab > /dev/null
 
     logMessage "Entry successfully added to fstab (/etc/fstab)." "INFO"
 
