@@ -128,7 +128,7 @@ read -p "Do you want to make a new entry to the WebDav client (davfs2) configura
 # Check the user's response
 if [[ "$confirm" =~ ^[Yy]$ ]]; then
 
-    while [[ ! "$retry" =~ ^[Yy]$ ]]; do
+    while [[ -z "$url" || "$retry" =~ ^[Yy]$ ]]; do
 
         echo "To add a new WebDav folder mount, you need to provide the following information:"
 
@@ -148,7 +148,7 @@ if [[ "$confirm" =~ ^[Yy]$ ]]; then
         echo "Username: ${username}"
         echo "Password: ********"
         echo ""
-        read "Do you want to continue or re-enter the information? (y/N): " 2>&1 retry
+        read -p "Do you want to enter the information again? (y/N): " 2>&1 retry
 
     done
 
