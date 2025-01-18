@@ -143,11 +143,9 @@ if [[ "$confirm" =~ ^[Yy]$ ]]; then
         url="https://${address}/remote.php/dav/files/${username}"
 
         echo "The following entry will be added to the WebDav client configuration:"
-        echo ""
-        echo "URL: ${url}"
+        echo "URL:      ${url}"
         echo "Username: ${username}"
         echo "Password: ********"
-        echo ""
         read -p "Do you want to enter the information again? (y/N): " 2>&1 retry
 
     done
