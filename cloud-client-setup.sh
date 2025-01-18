@@ -89,8 +89,10 @@ if ! command -v mount.davfs &> /dev/null; then
 
     logMessage "Installing WebDav Client (davfs2)..." "INFO"
 
+    export DEBIAN_FRONTEND=noninteractive
+
     # Installing DAVFS2 (run non-interactively)
-    run DEBIAN_FRONTEND=noninteractive sudo apt-get install -y davfs2
+    run sudo apt-get install -y davfs2
 
     logMessage "WebDav Client (davfs2) installed successfully." "INFO"
 
