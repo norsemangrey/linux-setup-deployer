@@ -91,6 +91,8 @@ if ! command -v mount.davfs &> /dev/null; then
 
     export DEBIAN_FRONTEND=noninteractive
 
+    echo "You might need to hit 'Enter' to continue..."
+
     # Installing DAVFS2 (run non-interactively)
     run sudo apt-get install -y davfs2
 
