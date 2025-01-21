@@ -97,6 +97,61 @@ run sudo apt-get update -y && run sudo apt-get upgrade -y
 
 logMessage "System update and upgrade completed." "INFO"
 
+
+# Ensure required locales are available
+
+# Required locales
+locales=("en_US" "nb_NO")
+
+# Check if each locale is available
+missingLocales=()
+
+# Check if each locale is available
+for locale in "${locales[@]}"; do
+
+    # Append UTF string to locale
+    localeCheck="${locale}.utf8"
+
+    # Check if locale is available
+    if ! locale -a | grep -q "${localeCheck}"; then
+
+        # Add missing locale to array
+        missingLocales+=("${locale}")
+
+    fi
+
+done
+
+# Regenerate locales if any are missing
+if [ ${#missingLocales[@]} -ne 0 ]; then
+
+  logMessage "Found missing locales (${missingLocales[*]}). Adding to locale file (/etc/locale.gen)..." "INFO"
+
+  # Backup locale.gen
+  sudo cp /etc/locale.gen /etc/locale.gen.bak
+
+  # Add missing locales to locale file
+  for locale in "${missingLocales[@]}"; do
+
+    # Append UTF string to locale
+    localeNew="${locale}.UTF-8"
+
+    # Add locale to locale.gen file
+    sudo sed -i "/${localeNew}/s/^#//" /etc/locale.gen
+
+  done
+
+  # Regenerate locales
+  logMessage "Generating missing locales..." "INFO"
+  sudo locale-gen
+
+else
+
+  echo "All required locales are already available." "DEBUG"
+
+fi
+
+
 # Check and install UFW
 if ! command -v ufw &> /dev/null; then
 
