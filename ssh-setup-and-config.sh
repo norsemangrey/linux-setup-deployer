@@ -108,7 +108,7 @@ else
     logMessage "Installing OpenSSH server..." "INFO"
 
     # Update and install OpenSSH server
-    sudo apt-get update && sudo apt-get install -y openssh-server
+    run sudo apt-get update && run sudo apt-get install -y openssh-server
 
 fi
 
@@ -163,7 +163,7 @@ else
     logMessage "Installing Keychain Key Manager..." "INFO"
 
     # Install Keychain Key Manager
-    sudo apt-get update && sudo apt-get install -y keychain
+    run sudo apt-get update && run sudo apt-get install -y keychain
 
 fi
 

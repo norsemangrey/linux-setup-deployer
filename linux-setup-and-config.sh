@@ -141,9 +141,11 @@ if [ ${#missingLocales[@]} -ne 0 ]; then
 
   done
 
-  # Regenerate locales
+
   logMessage "Generating missing locales..." "INFO"
-  sudo locale-gen
+
+  # Regenerate locales
+  run sudo locale-gen
 
 else
 

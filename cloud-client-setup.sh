@@ -110,18 +110,6 @@ fi
 # Create a directory for the cloud storage
 mkdir -p "${cloudPath}"
 
-# Create a directory for the davfs2 configuration
-mkdir -p $(dirname "${configFile}")
-
-# Copy the template secrets file to the davfs2 configuration directory
-sudo cp /etc/davfs2/secrets "${configFile}"
-
-# Change the ownership of the secrets file to the user
-sudo chown "${username}":"${username}" "${configFile}"
-
-# Change the permissions of the secrets file to read-write for the user only
-chmod 600 "${configFile}"
-
 
 # Prompt the user for the WebDav entry or continue
 read -p "Do you want to make a new entry to the WebDav client (davfs2) configuration? (y/N): " 2>&1 confirm
