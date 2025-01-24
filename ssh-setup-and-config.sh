@@ -153,6 +153,20 @@ else
 
 fi
 
+# Check if Keychain is installed
+if command -v keychain &> /dev/null; then
+
+    logMessage "Keychain is already installed." "DEBUG"
+
+else
+
+    logMessage "Installing Keychain Key Manager..." "INFO"
+
+    # Install Keychain Key Manager
+    sudo apt-get update && sudo apt-get install -y keychain
+
+fi
+
 logMessage "Setting up SSH key-based authentication for '${username}'..." "INFO"
 
 # Create SSH directory if it doesn't exist and set correct permissions

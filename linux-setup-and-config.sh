@@ -288,6 +288,7 @@ else
 
 fi
 
+
 # Set external SSH installer script
 cloudClientInstaller=$(dirname "${BASH_SOURCE[0]}")"/cloud-client-setup.sh"
 
@@ -329,6 +330,7 @@ dotfilesInstaller="deploy-config-linux.sh"
 
 # Clone and execute the 'dotfiles' repository, creating symlinks for configurations files in the repo
 "${externalCloneAndExecute}" --url "${dotfilesRepo}" --executable "${dotfilesInstaller}" --root "${HOME}" ${debug:+-d} ${verbose:+-v}
+
 
 # Set ZSH as the default shell if ZSH environment file exists
 if [[ -f "$HOME/.zshenv" ]]; then

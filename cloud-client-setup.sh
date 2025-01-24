@@ -81,8 +81,7 @@ username="${USER}"
 cloudPath="${HOME}/cloud"
 
 # Set the path to the DAVFS2 configuration file
-configFile="${HOME}/.config/davfs2/secrets"
-
+configFile="/etc/davfs2/secrets"
 
 # Check and install DAVFS2 (mounts a WebDAV resource as a regular file system)
 if ! command -v mount.davfs &> /dev/null; then
