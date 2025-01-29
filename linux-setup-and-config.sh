@@ -223,6 +223,22 @@ else
 
 fi
 
+# Check and install JQuery (jq)
+if ! command -v tmux &> /dev/null; then
+
+    logMessage "Installing TMUX..." "INFO"
+
+    # Install JQuery
+    run sudo apt-get install -y tmux
+
+    logMessage "TMUX installed successfully." "INFO"
+
+else
+
+    logMessage "TMUX is already installed." "DEBUG"
+
+fi
+
 # Check and install Fastfetch
 if ! command -v fastfetch &> /dev/null; then
 
