@@ -223,7 +223,7 @@ else
 
 fi
 
-# Check and install JQuery (jq)
+# Check and install TMUX
 if ! command -v tmux &> /dev/null; then
 
     logMessage "Installing TMUX..." "INFO"
@@ -236,6 +236,22 @@ if ! command -v tmux &> /dev/null; then
 else
 
     logMessage "TMUX is already installed." "DEBUG"
+
+fi
+
+# Check and install FZF
+if ! command -v fzf &> /dev/null; then
+
+    logMessage "Installing FZF..." "INFO"
+
+    # Install FZF
+    run sudo apt-get install -y fzf
+
+    logMessage "FZF installed successfully." "INFO"
+
+else
+
+    logMessage "FZF is already installed." "DEBUG"
 
 fi
 
