@@ -366,8 +366,8 @@ dotfilesInstaller="deploy-config-linux.sh"
 "${externalCloneAndExecute}" --url "${dotfilesRepo}" --executable "${dotfilesInstaller}" --root "${HOME}" ${debug:+-d} ${verbose:+-v}
 
 
-# Set ZSH as the default shell if ZSH environment file exists
-if [[ -f "$HOME/.zshenv" ]]; then
+# Check if ZSH is installed and set as the default shell if ZSH environment file exists
+if command -v zsh &> /dev/null && [[ -f "$HOME/.zshenv" ]]; then
 
     # Check that ZSH is not already default shell
     if [[ "$SHELL" != "$(which zsh)" ]]; then
@@ -390,7 +390,7 @@ if [[ -f "$HOME/.zshenv" ]]; then
 
 else
 
-    logMessage "No ZSH environment file found. Skipping setting ZSH as the default shell." "WARNING"
+    logMessage "ZSH is not installed or no ZSH environment file found. Skipping setting ZSH as the default shell." "WARNING"
 
 fi
 
