@@ -383,7 +383,35 @@ dotfilesInstaller="deploy-config-linux.sh"
 "${externalCloneAndExecute}" --url "${dotfilesRepo}" --executable "${dotfilesInstaller}" --root "${HOME}" ${debug:+-d} ${verbose:+-v}
 
 
-# Install plugins (done after dotfiles to get correct paths etc.)
+# Check if ZSH is installed and set as the default shell if ZSH environment file exists
+if command -v zsh &> /dev/null && [[ -f "$HOME/.zshenv" ]]; then
+
+    # Check that ZSH is not already default shell
+    if [[ "$SHELL" != "$(which zsh)" ]]; then
+
+        logMessage "Setting ZSH as the default shell..." "INFO"
+
+        # Set ZSH as the default shell
+        chsh -s "$(which zsh)" 2>&1
+
+        # Activate ZSH
+        zsh
+
+        logMessage "ZSH is now the default shell. Please log out and log back in for changes to take effect." "INFO"
+
+    else
+
+        logMessage "ZSH is already the default shell." "DEBUG"
+
+    fi
+
+else
+
+    logMessage "ZSH is not installed or no ZSH environment file found. Skipping setting ZSH as the default shell." "WARNING"
+
+fi
+
+# Install plugins (done after dotfiles and ZSH to get correct paths, envs, etc.)
 
 tmuxConfigDirectory=$XDG_CONFIG_HOME/tmux
 tpmDirectory="${tmuxConfigDirectory}/plugins/tpm"
@@ -416,35 +444,6 @@ if [[ -d "${tmuxConfigDirectory}" ]]; then
 else
 
     logMessage "TMUX config directory not found. Skipping TPM and plugin installation." "WARNING"
-
-fi
-
-
-# Check if ZSH is installed and set as the default shell if ZSH environment file exists
-if command -v zsh &> /dev/null && [[ -f "$HOME/.zshenv" ]]; then
-
-    # Check that ZSH is not already default shell
-    if [[ "$SHELL" != "$(which zsh)" ]]; then
-
-        logMessage "Setting ZSH as the default shell..." "INFO"
-
-        # Set ZSH as the default shell
-        chsh -s "$(which zsh)" 2>&1
-
-        # Activate ZSH
-        zsh
-
-        logMessage "ZSH is now the default shell. Please log out and log back in for changes to take effect." "INFO"
-
-    else
-
-        logMessage "ZSH is already the default shell." "DEBUG"
-
-    fi
-
-else
-
-    logMessage "ZSH is not installed or no ZSH environment file found. Skipping setting ZSH as the default shell." "WARNING"
 
 fi
 
