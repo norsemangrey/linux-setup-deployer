@@ -383,6 +383,43 @@ dotfilesInstaller="deploy-config-linux.sh"
 "${externalCloneAndExecute}" --url "${dotfilesRepo}" --executable "${dotfilesInstaller}" --root "${HOME}" ${debug:+-d} ${verbose:+-v}
 
 
+# Install plugins (done after dotfiles to get correct paths etc.)
+
+tmuxConfigDirectory=$XDG_CONFIG_HOME/tmux
+tpmDirectory="${tmuxConfigDirectory}/plugins/tpm"
+
+# Proceed with TPM setup only if the TMUX config directory exists
+if [[ -d "${tmuxConfigDirectory}" ]]; then
+
+    # Install TMUX Plugin Manager (TPM) if not already installed
+    if [[ ! -d "${tpmDirectory}" ]]; then
+
+        logMessage "Installing Tmux Plugin Manager (TPM)..." "INFO"
+
+        # Clone the TPM repository
+        git clone https://github.com/tmux-plugins/tpm "${tpmDirectory}"
+
+        logMessage "TPM installed successfully." "INFO"
+
+    else
+
+        logMessage "TPM is already installed." "DEBUG"
+    fi
+
+    logMessage "Installing TPM plugins..." "INFO"
+
+    # Automatically install TPM plugins
+    "${tpmDirectory}/bin/install_plugins"
+
+    logMessage "TPM plugins installed." "INFO"
+
+else
+
+    logMessage "TMUX config directory not found. Skipping TPM and plugin installation." "WARNING"
+
+fi
+
+
 # Check if ZSH is installed and set as the default shell if ZSH environment file exists
 if command -v zsh &> /dev/null && [[ -f "$HOME/.zshenv" ]]; then
 
