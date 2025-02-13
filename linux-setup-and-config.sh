@@ -382,10 +382,15 @@ dotfilesInstaller="deploy-config-linux.sh"
 # Clone and execute the 'dotfiles' repository, creating symlinks for configurations files in the repo
 "${externalCloneAndExecute}" --url "${dotfilesRepo}" --executable "${dotfilesInstaller}" --root "${HOME}" ${debug:+-d} ${verbose:+-v}
 
+# Configure install plugins and configure applications
+# (done after dotfiles to get correct paths etc.)
 
-# Install plugins (done after dotfiles to get correct paths etc.)
+# Source common environment variables
+[ -f "$HOME/.env" ] && source "$HOME/.env"
 
-tmuxConfigDirectory=$HOME/.config/tmux
+# TMUX
+
+tmuxConfigDirectory="${XDG_CONFIG_HOME}/tmux"
 tpmDirectory="${tmuxConfigDirectory}/plugins/tpm"
 
 # Proceed with TPM setup only if the TMUX config directory exists
@@ -419,6 +424,7 @@ else
 
 fi
 
+#ZSH
 
 # Check if ZSH is installed and set as the default shell if ZSH environment file exists
 if command -v zsh &> /dev/null && [[ -f "$HOME/.zshenv" ]]; then
