@@ -228,7 +228,7 @@ if ! command -v tmux &> /dev/null; then
 
     logMessage "Installing TMUX..." "INFO"
 
-    # Install JQuery
+    # Install TMUX
     run sudo apt-get install -y tmux
 
     logMessage "TMUX installed successfully." "INFO"
@@ -288,6 +288,23 @@ else
     logMessage "JQuery is already installed." "DEBUG"
 
 fi
+
+# Check and install YQ
+if ! command -v yq &> /dev/null; then
+
+    logMessage "Installing YQ..." "INFO"
+
+    # Install YQ
+    run sudo apt-get install -y yq
+
+    logMessage "YQ installed successfully." "INFO"
+
+else
+
+    logMessage "YQ is already installed." "DEBUG"
+
+fi
+
 
 # Set external SSH installer script
 sshInstaller=$(dirname "${BASH_SOURCE[0]}")"/ssh-setup-and-config.sh"
