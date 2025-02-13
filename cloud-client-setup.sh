@@ -150,7 +150,7 @@ if [[ "$confirm" =~ ^[Yy]$ ]]; then
         configEntry="${url} ${username} ${password}"
 
         # Append the string to the configuration file
-        echo "${configEntry}" | tee -a "${configFile}" > /dev/null
+        echo "${configEntry}" | sudo tee -a "${configFile}" > /dev/null
 
         logMessage "Entry successfully added to configuration file (${configFile})." "INFO"
 
