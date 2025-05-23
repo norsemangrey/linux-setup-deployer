@@ -305,6 +305,44 @@ else
 
 fi
 
+# Check and install FD
+if ! command -v fd &> /dev/null; then
+
+    logMessage "Installing fd..." "INFO"
+
+    # Install FD
+    run sudo apt-get install -y fd-find
+
+    logMessage "FD installed successfully." "INFO"
+
+else
+
+    logMessage "FD is already installed." "DEBUG"
+
+fi
+
+# Check and install Bat (batcat)
+if ! command -v batcat &> /dev/null; then
+
+    logMessage "Installing Bat (batcat)..." "INFO"
+
+    # Install Bat
+    run sudo apt-get install -y bat
+
+    # Create local bin folder if it does not exist
+    mkdir -p ~/.local/bin
+
+    # Create a symling for bat as it will be installed as batcat due to clash with other packages
+    ln -s /usr/bin/batcat ~/.local/bin/bat
+
+    logMessage "Bat installed successfully." "INFO"
+
+else
+
+    logMessage "Bat is already installed." "DEBUG"
+
+fi
+
 
 # Set external SSH installer script
 sshInstaller=$(dirname "${BASH_SOURCE[0]}")"/ssh-setup-and-config.sh"
