@@ -427,6 +427,8 @@ personalRepoPath="${HOME}/workspace/personal/repos"
 # Source common environment variables
 [ -f "$HOME/.env" ] && source "$HOME/.env"
 
+# Git
+
 # Tell Git to use SSH for the following repos
 git -C "${personalRepoPath}"/linux-setup-deployer remote set-url origin github:norsemangrey/linux-setup-deployer.git
 git -C "${personalRepoPath}"/.dotfiles remote set-url origin github:norsemangrey/.dotfiles.git
