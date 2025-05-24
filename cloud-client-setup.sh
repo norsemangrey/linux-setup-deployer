@@ -88,6 +88,7 @@ if ! command -v mount.davfs &> /dev/null; then
 
     logMessage "Installing WebDav Client (davfs2)..." "INFO"
 
+    # Disables interactive configuration prompts during package installations
     export DEBIAN_FRONTEND=noninteractive
 
     echo "You might need to hit 'Enter' to continue..."
