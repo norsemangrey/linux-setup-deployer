@@ -427,6 +427,10 @@ personalRepoPath="${HOME}/workspace/personal/repos"
 # Source common environment variables
 [ -f "$HOME/.env" ] && source "$HOME/.env"
 
+# Tell Git to use SSH for the following repos
+git -C "${dotfilesInstaller}"/linux-setup-deployer.git remote set-url origin github:norsemangrey/linux-setup-deployer.git
+git -C "${dotfilesInstaller}"/.dotfiles.git remote set-url origin github:norsemangrey/.dotfiles.git
+
 # TMUX
 
 tmuxConfigDirectory="${XDG_CONFIG_HOME}/tmux"
