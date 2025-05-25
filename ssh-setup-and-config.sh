@@ -261,21 +261,21 @@ sshConfigUpdate() {
     local value="$2"
 
     # Check if a non-commented line for the setting already exists (excluding lines starting with "# ")
-    if sudo grep -E "^[[:space:]]*${setting}\b" "${sshConfig}" > /dev/null; then
+    if sudo grep -E "^[[:space:]]*${setting}\b" "${sshConfigFile}" > /dev/null; then
     
         # Update existing setting line
-        sudo sed -i -E "/^# /! s|^[[:space:]]*${setting}\b.*|${setting} ${value}|" "${sshConfig}"
+        sudo sed -i -E "/^# /! s|^[[:space:]]*${setting}\b.*|${setting} ${value}|" "${sshConfigFile}"
         
     # If only a commented line exists
-    elif sudo grep -E "^[[:space:]]*#?[[:space:]]*${setting}\b" "${sshConfig}" > /dev/null; then
+    elif sudo grep -E "^[[:space:]]*#?[[:space:]]*${setting}\b" "${sshConfigFile}" > /dev/null; then
     
         # Replace commented line (but not "# " style comments)
-        sudo sed -i -E "/^# /! s|^[[:space:]]*#?[[:space:]]*${setting}\b.*|${setting} ${value}|" "${sshConfig}"
+        sudo sed -i -E "/^# /! s|^[[:space:]]*#?[[:space:]]*${setting}\b.*|${setting} ${value}|" "${sshConfigFile}"
         
     else
     
         # Append if setting does not exist at all
-        echo "${setting} ${value}" | sudo tee -a "${sshConfig}" > /dev/null
+        echo "${setting} ${value}" | sudo tee -a "${sshConfigFile}" > /dev/null
         
     fi
 
