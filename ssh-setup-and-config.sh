@@ -250,24 +250,36 @@ logMessage "Backing up existing SSH configuration and disabling root login and p
 
 # Backup existing SSH configuration
 timestamp=$(date +"%Y-%m-%d_%H-%M-%S")
-sshConfigBackup="/etc/ssh/sshd_config.bak.${timestamp}"
-sudo cp /etc/ssh/sshd_config "${sshConfigBackup}"
+sshConfigFile="/etc/ssh/sshd_config"
+sshConfigBackup="${sshConfigFile}.bak.${timestamp}"
+sudo cp "${sshConfigFile}" "${sshConfigBackup}"
 
 # Check and update SSH configuration values only if necessary
 sshConfigUpdate() {
 
-    local setting="${1}"
-    local value="${2}"
+    local setting="$1"
+    local value="$2"
 
-    if ! sudo grep -q "^${setting} ${value}" /etc/ssh/sshd_config; then
-
-        sudo sed -i "s/^#${setting}.*/${setting} ${value}/" /etc/ssh/sshd_config
-        sudo sed -i "/^${setting} /!a ${setting} ${value}" /etc/ssh/sshd_config
-
-        configUpdated=true
-
+    # Check if a non-commented line for the setting already exists (excluding lines starting with "# ")
+    if sudo grep -E "^[[:space:]]*${setting}\b" "${sshConfig}" > /dev/null; then
+    
+        # Update existing setting line
+        sudo sed -i -E "/^# /! s|^[[:space:]]*${setting}\b.*|${setting} ${value}|" "${sshConfig}"
+        
+    # If only a commented line exists
+    elif sudo grep -E "^[[:space:]]*#?[[:space:]]*${setting}\b" "${sshConfig}" > /dev/null; then
+    
+        # Replace commented line (but not "# " style comments)
+        sudo sed -i -E "/^# /! s|^[[:space:]]*#?[[:space:]]*${setting}\b.*|${setting} ${value}|" "${sshConfig}"
+        
+    else
+    
+        # Append if setting does not exist at all
+        echo "${setting} ${value}" | sudo tee -a "${sshConfig}" > /dev/null
+        
     fi
 
+    configUpdated=true
 }
 
 # Modify config to disable root login and password authentication
