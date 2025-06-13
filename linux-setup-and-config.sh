@@ -313,6 +313,12 @@ if ! command -v fd &> /dev/null; then
     # Install FD
     run sudo apt-get install -y fd-find
 
+    # Create local bin folder if it does not exist
+    mkdir -p ~/.local/bin
+
+    # Create a symling for bat as it will be installed as batcat due to clash with other packages
+    ln -s /usr/bin/fdfind ~/.local/bin/fd
+
     logMessage "FD installed successfully." "INFO"
 
 else
