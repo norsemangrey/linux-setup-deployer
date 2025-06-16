@@ -349,6 +349,25 @@ else
 
 fi
 
+# Check and install Avahi (multicast DNS/DNS service discovery)
+# Mostly to be able to resolv the hostname if Linux running on Hyper-V on Win 11
+if ! command -v avahi-daemon &> /dev/null; then
+
+    logMessage "Installing Avahi..." "INFO"
+
+    # Install Avahi
+    run sudo apt-get install -y avahi-daemon
+
+    # Start and enable Avahi service
+    run sudo systemctl enable --now avahi-daemon
+
+    logMessage "Avahi installed successfully." "INFO"
+
+else
+
+    logMessage "Avahi is already installed." "DEBUG"
+
+fi
 
 # Set external SSH installer script
 sshInstaller=$(dirname "${BASH_SOURCE[0]}")"/ssh-setup-and-config.sh"

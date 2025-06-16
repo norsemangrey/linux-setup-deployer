@@ -225,7 +225,7 @@ while [[ "$copyKey" == true ]]; do
     logMessage "Waiting for new client public key..." "INFO"
 
     # Prompt user to copy the public key from the client computer
-    echo "Please use the 'ssh-copy-id' command on your client machine to copy client public key to this server (example: 'ssh-copy-id ${username}@${serverIp}')."
+    echo "Please use the 'ssh-copy-id' command on your client machine to copy client public key to this server (example: 'ssh-copy-id ${username}@${serverIp}' or 'ssh-copy-id ${username}@${hostname}')."
     read -p "Press 'Enter' after copying the public key to continue..." 2>&1
 
     # Get the current line count
@@ -262,21 +262,21 @@ sshConfigUpdate() {
 
     # Check if a non-commented line for the setting already exists (excluding lines starting with "# ")
     if sudo grep -E "^[[:space:]]*${setting}\b" "${sshConfigFile}" > /dev/null; then
-    
+
         # Update existing setting line
         sudo sed -i -E "/^# /! s|^[[:space:]]*${setting}\b.*|${setting} ${value}|" "${sshConfigFile}"
-        
+
     # If only a commented line exists
     elif sudo grep -E "^[[:space:]]*#?[[:space:]]*${setting}\b" "${sshConfigFile}" > /dev/null; then
-    
+
         # Replace commented line (but not "# " style comments)
         sudo sed -i -E "/^# /! s|^[[:space:]]*#?[[:space:]]*${setting}\b.*|${setting} ${value}|" "${sshConfigFile}"
-        
+
     else
-    
+
         # Append if setting does not exist at all
         echo "${setting} ${value}" | sudo tee -a "${sshConfigFile}" > /dev/null
-        
+
     fi
 
     configUpdated=true
