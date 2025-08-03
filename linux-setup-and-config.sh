@@ -316,8 +316,8 @@ if ! command -v fd &> /dev/null; then
     # Create local bin folder if it does not exist
     mkdir -p ~/.local/bin
 
-    # Create a symling for bat as it will be installed as batcat due to clash with other packages
-    ln -s /usr/bin/fdfind ~/.local/bin/fd
+    # Create a symlink for fd as it will be installed as fdfind due to clash with other packages
+    ln -sf /usr/bin/fdfind ~/.local/bin/fd
 
     logMessage "FD installed successfully." "INFO"
 
@@ -338,8 +338,8 @@ if ! command -v batcat &> /dev/null; then
     # Create local bin folder if it does not exist
     mkdir -p ~/.local/bin
 
-    # Create a symling for bat as it will be installed as batcat due to clash with other packages
-    ln -s /usr/bin/batcat ~/.local/bin/bat
+    # Create a symlink for bat as it will be installed as batcat due to clash with other packages
+    ln -sf /usr/bin/batcat ~/.local/bin/bat
 
     logMessage "Bat installed successfully." "INFO"
 
