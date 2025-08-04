@@ -79,7 +79,7 @@ username="${USER}"
 logMessage "Setting up Personal cloud directory..." "INFO"
 
 # Set the path to the cloud storage directory
-cloudPath="${HOME}/cloud/personal"
+personalCloudPath="${HOME}/cloud/personal"
 
 # Set the path to the DAVFS2 configuration file
 configFile="/etc/davfs2/secrets"
@@ -109,7 +109,7 @@ else
 fi
 
 # Create a directory for the cloud storage
-mkdir -p "${cloudPath}"
+mkdir -p "${personalCloudPath}"
 
 # Prompt the user for the WebDav entry or continue
 read -p "Do you want to make a new entry to the WebDav client (davfs2) configuration? (y/N): " 2>&1 confirm
@@ -164,7 +164,7 @@ if [[ "$confirm" =~ ^[Yy]$ ]]; then
     else
 
         # Create the fstab entry string
-        fstabEntry="${url} ${cloudPath} davfs user,rw,auto 0 0"
+        fstabEntry="${url} ${personalCloudPath} davfs user,rw,auto 0 0"
 
         # Append the string to the fstab
         echo "${fstabEntry}" | sudo tee -a /etc/fstab > /dev/null
@@ -175,7 +175,7 @@ if [[ "$confirm" =~ ^[Yy]$ ]]; then
         sudo systemctl daemon-reload
 
         # Mount the cloud storage directory
-        sudo mount "${cloudPath}"
+        sudo mount "${personalCloudPath}"
 
     fi
 
@@ -192,7 +192,7 @@ fi
 logMessage "Setting up Work cloud directory..." "INFO"
 
 # Set the path to the cloud storage directory
-cloudPath="${HOME}/cloud/work"
+workCloudPath="${HOME}/cloud/work"
 
 # Check if '/mnt/c' is already mounted
 if mountpoint -q /mnt/c; then
@@ -316,23 +316,23 @@ EOF
 
 fi
 
-logMessage "Checking for Windows symlink ('C:/Cloud') in '/mnt/c/Cloud'..." "INFO"
+logMessage "Checking for Windows symlink ('C:/Cloud/work') in '/mnt/c/Cloud'..." "INFO"
 
 # Check for existence of a symlink specifically named '/mnt/c/Cloud' in mount point
-if [[ ! -L "/mnt/c/Cloud" ]]; then
+if [[ ! -L "/mnt/c/Cloud/work" ]]; then
 
-    logMessage "Symlink '/mnt/c/Cloud' not found. Aborting." "ERROR"
+    logMessage "Symlink '/mnt/c/Cloud/work' not found. Aborting." "ERROR"
 
-    echo "Expected symlink folder 'C:/Cloud' was not found on the Windows host's C drive."
+    echo "Expected symlink folder 'C:/Cloud/work' was not found on the Windows host's C drive."
 
     exit 1
 
 fi
 
-logMessage "Found Windows symlink ('C:/Cloud') in '/mnt/c/Cloud'." "DEBUG"
+logMessage "Found Windows symlink ('C:/Cloud/work') in '/mnt/c/Cloud'." "DEBUG"
 
 # Read the target of the symlink
-winTarget=$(readlink "/mnt/c/Cloud")
+winTarget=$(readlink "/mnt/c/Cloud/work")
 
 logMessage "Original Windows symlink target: '$winTarget'" "DEBUG"
 
@@ -342,22 +342,60 @@ linuxTarget=$(echo "$winTarget" | sed -E 's|^/..?/([A-Za-z]):|/mnt/\L\1|')
 logMessage "Converted to Linux target: '$linuxTarget'" "DEBUG"
 
 # Check if the Linux symlink target already exists
-if [[ -e "${cloudPath}" || -L "${cloudPath}" ]]; then
+if [[ -e "${workCloudPath}" || -L "${workCloudPath}" ]]; then
 
-    logMessage "Symlink '${cloudPath} → $linuxTarget' already exists." "INFO"
+    logMessage "Symlink '${workCloudPath} → $linuxTarget' already exists." "INFO"
 
 else
 
     # Create the Linux-native symlink pointing to the resolved Windows share path
-    if ! ln -s "$linuxTarget" "${cloudPath}"; then
+    if ! ln -s "$linuxTarget" "${workCloudPath}"; then
 
-        logMessage "Failed to create symlink '${cloudPath} → $linuxTarget'" "ERROR"
+        logMessage "Failed to create symlink '${workCloudPath} → $linuxTarget'" "ERROR"
 
         exit 1
 
     fi
 
-    logMessage "Symlink created: '${cloudPath} → $linuxTarget'" "INFO"
+    logMessage "Symlink created: '${workCloudPath} → $linuxTarget'" "INFO"
+
+fi
+
+
+# Path on Windows host for personal cloud sync
+personalCloudPathOnWindowsHost="/mnt/c/Cloud/personal/"
+
+# Only run this if /mnt/c is actually mounted
+if [[ mountpoint -q /mnt/c && -d "${personalCloudPathOnWindowsHost}" ]]; then
+
+    # Ensure log directory exists
+    logPath="${LOG_PATH}/rsync/sync.log" && mkdir -p "$(dirname "${logPath}")"
+
+    # Add Cron job if it doesn't already exist
+    # Checks every hour if there are any files (other than lost+found) in the specified directory, and if so,
+    # synchronizes them to a destination directory, logging the results.
+    cronJob="0 * * * * find \"${personalCloudPath}\" -mindepth 1 \\( -name 'lost+found' -prune \\) -o -print | grep -q . && rsync -a --delete --exclude='lost+found' \"${personalCloudPath}/\" \"${personalCloudPathOnWindowsHost}\" >> \"$logPath\" 2>&1"
+
+    # Check if the cron job already exists
+    (crontab -l 2>/dev/null | grep -F "$cronJob") >/dev/null
+
+    # If the cron job does not exist, add it
+    if [ $? -ne 0 ]; then
+
+        # Add the cron job to the user's crontab
+        (crontab -l 2>/dev/null; echo "$cronJob") | crontab -
+
+        logMessage "Cron job added to run personal cloud content sync to host every hour." "INFO"
+
+    else
+
+        logMessage "Cron job already exists." "INFO"
+
+    fi
+
+else
+
+    logMessage "Windows share mountpoint not mounted or personal cloud directory does not exist. Skipping personal cloud sync and cron job setup." "INFO"
 
 fi
 
