@@ -350,7 +350,7 @@ else
 fi
 
 # Check and install Avahi (multicast DNS/DNS service discovery)
-# Mostly to be able to resolv the hostname if Linux running on Hyper-V on Win 11
+# Mostly to be able to resolve the hostname if Linux running on Hyper-V on Win 11
 if ! command -v avahi-daemon &> /dev/null; then
 
     logMessage "Installing Avahi..." "INFO"
@@ -491,6 +491,22 @@ if [[ -d "${tmuxConfigDirectory}" ]]; then
 else
 
     logMessage "TMUX config directory not found. Skipping TPM and plugin installation." "WARNING"
+
+fi
+
+# Install 'libtmux' for Python if not already installed (Python library for interacting with TMUX)
+if ! python3 -c "import libtmux" &> /dev/null; then
+
+    logMessage "Installing TMUX Python library (libtmux)..." "INFO"
+
+    # Install TMUX Python library
+    run sudo apt-get install -y python3-libtmux
+
+    logMessage "TMUX Python library (libtmux) installed successfully." "INFO"
+
+else
+
+    logMessage "TMUX Python library (libtmux) is already installed." "DEBUG"
 
 fi
 
