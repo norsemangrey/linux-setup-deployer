@@ -368,15 +368,14 @@ personalCloudPathOnWindowsHost="/mnt/c/Cloud/personal/"
 # Only run this if /mnt/c is actually mounted
 if mountpoint -q /mnt/c && [ -d "${personalCloudPathOnWindowsHost}" ]; then
 
-    # Checks every hour if there are any files (other than lost+found) in the specified directory, and if so,
-    # synchronizes them to a destination directory, logging the results.
-    syncCommand="find \"${personalCloudPath}\" -mindepth 1 \\( -name 'lost+found' -prune \\) -o -print | grep -q . && rsync -a --delete --exclude='lost+found' \"${personalCloudPath}/\" \"${personalCloudPathOnWindowsHost}\" >> \"${LOG_PATH}/rsync.log\" 2>&1"
+    # Define the sync command without log redirection for immediate execution
+    syncCommand="find \"${personalCloudPath}\" -mindepth 1 \\( -name 'lost+found' -prune \\) -o -print | grep -q . && rsync -a --delete --exclude='lost+found' \"${personalCloudPath}/\" \"${personalCloudPathOnWindowsHost}\""
 
-    # Initial sync to ensure everything is up-to-date
+    # Initial sync to ensure everything is up-to-date (no log redirection)
     eval "${syncCommand}"
 
-    # Add Cron job if it doesn't already exist
-    cronJob="0 * * * * ${syncCommand}"
+    # Define the cron job command with log redirection
+    cronJob="0 * * * * ${syncCommand} >> \"${LOG_PATH}/rsync.log\" 2>&1"
 
     # Check if the cron job already exists
     if crontab -l 2>/dev/null | grep -Fq "${cronJob}"; then
