@@ -451,7 +451,7 @@ setReposToUseSSH "${personalReposPath}" "${personalGithubUser}"
 ### TMUX SETUP
 
 tmuxConfigDirectory="${XDG_CONFIG_HOME}/tmux"
-tpmDirectory="${tmuxConfigDirectory}/plugins/tpm"
+tpmDirectory="${tmuxConfigDirectory}/plugins"
 
 # Proceed with TPM setup only if the TMUX config directory exists
 if [[ -d "${tmuxConfigDirectory}" ]]; then
