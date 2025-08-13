@@ -287,6 +287,7 @@ declare -a packages=(
     "tmux"
     "fzf"
     "fastfetch"
+    "oh-my-posh"
     "jq"
     "yq"
     "fd-find"
