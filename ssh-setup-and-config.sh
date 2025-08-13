@@ -81,7 +81,7 @@ username="${USER}"
 # Get the IP address of the server
 serverIp=$(hostname -I | awk '{print $1}')
 
-logMessage "Identified user '${username}' @ host '${hostname}'" "DEBUG"
+logMessage "Identified user '${username}' @ host '$(hostname)'" "DEBUG"
 
 # If the username is "root", ask for confirmation before continuing
 if [ "${username}" == "root" ]; then
@@ -227,7 +227,7 @@ while [[ "$copyKey" == true ]]; do
     logMessage "Waiting for new client public key..." "INFO"
 
     # Prompt user to copy the public key from the client computer
-    echo "Please use the 'ssh-copy-id' command on your client machine to copy client public key to this server (example: 'ssh-copy-id ${username}@${serverIp}' or 'ssh-copy-id ${username}@${hostname}')."
+    echo "Please use the 'ssh-copy-id' command on your client machine to copy client public key to this server (example: 'ssh-copy-id ${username}@${serverIp}' or 'ssh-copy-id ${username}@$(hostname)')."
     read -p "Press 'Enter' after copying the public key to continue..." 2>&1
 
     # Get the current line count
