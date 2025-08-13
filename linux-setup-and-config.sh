@@ -125,35 +125,35 @@ done
 # Regenerate locales if any are missing
 if [ ${#missingLocales[@]} -ne 0 ]; then
 
-  logMessage "Found missing locales (${missingLocales[*]}). Adding to locale file (/etc/locale.gen)..." "INFO"
+    logMessage "Found missing locales (${missingLocales[*]}). Adding to locale file (/etc/locale.gen)..." "INFO"
 
-  # Backup locale.gen
-  sudo cp /etc/locale.gen /etc/locale.gen.bak
+    # Backup locale.gen
+    sudo cp /etc/locale.gen /etc/locale.gen.bak
 
-  # Add missing locales to locale file
-  for locale in "${missingLocales[@]}"; do
+    # Add missing locales to locale file
+    for locale in "${missingLocales[@]}"; do
 
-    # Append UTF string to locale
-    localeNew="${locale}.UTF-8"
+        # Append UTF string to locale
+        localeNew="${locale}.UTF-8"
 
-    # Add locale to locale.gen file
-    sudo sed -i "/${localeNew}/s/^#//" /etc/locale.gen
+        # Add locale to locale.gen file
+        sudo sed -i "/${localeNew}/s/^#//" /etc/locale.gen
 
-  done
+    done
 
 
-  logMessage "Generating missing locales..." "INFO"
+    logMessage "Generating missing locales..." "INFO"
 
-  # Regenerate locales
-  run sudo locale-gen
+    # Regenerate locales
+    run sudo locale-gen
 
 else
 
-  echo "All required locales are already available." "DEBUG"
+    echo "All required locales are already available." "DEBUG"
 
 fi
 
-
+# Function to install a package if not already installed
 installPackage() {
 
     local packageName="$1"
@@ -189,6 +189,7 @@ installPackage() {
 
 }
 
+# Function to perform alternative installation actions
 alternativeInstallationActions() {
 
     local packageName="$1"
@@ -212,6 +213,7 @@ alternativeInstallationActions() {
 
 }
 
+# Function to perform pre-installation actions
 preInstallationActions() {
 
     local packageName="$1"
@@ -236,6 +238,7 @@ preInstallationActions() {
 
 }
 
+# Function to perform post-installation actions
 postInstallationActions() {
 
     local packageName="$1"
@@ -280,6 +283,7 @@ postInstallationActions() {
 
 }
 
+# Array of packages to install
 declare -a packages=(
     "ufw"
     "zsh"
@@ -306,303 +310,94 @@ for package in "${packages[@]}"; do
 
 done
 
-# # Check and install UFW
-# if ! command -v ufw &> /dev/null; then
 
-#     logMessage "Installing UFW..." "INFO"
+# Function to run an local script with error handling and logging
+runLocalScript() {
 
-#     # Install JQuery
-#     run sudo apt-get install -y ufw
+    local scriptName="$1"
 
-#     logMessage "UFW installed successfully." "INFO"
+    # Set local setup script path
+    scriptPath=$(dirname "${BASH_SOURCE[0]}")"/${scriptName}.sh"
 
-# else
+    # Execute local setup script
+    if [[ -f "${scriptPath}" ]]; then
 
-#     logMessage "UFW is already installed." "DEBUG"
+        logMessage "Set execute permissions on installer script (${scriptPath})." "DEBUG"
 
-# fi
+        # Set permissions on the installer script
+        chmod +x "${scriptPath}"
 
-# # Check and install ZSH
-# if ! command -v zsh &> /dev/null; then
+        logMessage "Executing setup script (${scriptName})..." "INFO"
 
-#     logMessage "Installing ZSH..." "INFO"
+        # Execute installer script
+        "${scriptPath}" ${debug:+-d} ${verbose:+-v}
 
-#     # Installing ZSH
-#     run sudo apt-get install -y zsh
+        # Check for errors
+        if [[ $? -eq 0 ]]; then
 
-#     logMessage "ZSH installed successfully." "INFO"
+            logMessage "Setup script (${scriptName}) executed successfully." "INFO"
 
-# else
+        else
 
-#     logMessage "ZSH is already installed." "DEBUG"
+            logMessage "Setup script (${scriptName}) failed." "ERROR"
 
-# fi
+        fi
 
-# # Check and install Oh-My-Posh
-# if ! command -v oh-my-posh &> /dev/null; then
+    else
 
-#     logMessage "Installing Oh-My-Posh..." "INFO"
+        logMessage "Setup script (${scriptPath}) is not executable or not found." "ERROR"
 
-#     # Download Oh-My-Posh
-#     sudo wget https://github.com/JanDeDobbeleer/oh-my-posh/releases/latest/download/posh-linux-amd64 -O /usr/local/bin/oh-my-posh
+    fi
 
-#     # Set execution permission
-#     sudo chmod +x /usr/local/bin/oh-my-posh
-
-#     logMessage "Oh-My-Posh installed successfully." "INFO"
-
-# else
-
-#     logMessage "Oh-My-Posh is already installed." "DEBUG"
-
-#     run sudo oh-my-posh upgrade
-
-# fi
-
-# # Check and install LSDeluxe (lsd)
-# if ! command -v lsd &> /dev/null; then
-
-#     logMessage "Installing LSDeluxe (lsd)..." "INFO"
-
-#     # Install LSDelux
-#     run sudo apt-get install -y lsd
-
-#     logMessage "LSDeluxe installed successfully." "INFO"
-
-# else
-
-#     logMessage "LSDeluxe is already installed." "DEBUG"
-
-# fi
-
-# # Check and install TMUX
-# if ! command -v tmux &> /dev/null; then
-
-#     logMessage "Installing TMUX..." "INFO"
-
-#     # Install TMUX
-#     run sudo apt-get install -y tmux
-
-#     logMessage "TMUX installed successfully." "INFO"
-
-# else
-
-#     logMessage "TMUX is already installed." "DEBUG"
-
-# fi
-
-# # Check and install FZF
-# if ! command -v fzf &> /dev/null; then
-
-#     logMessage "Installing FZF..." "INFO"
-
-#     # Install FZF
-#     run sudo apt-get install -y fzf
-
-#     logMessage "FZF installed successfully." "INFO"
-
-# else
-
-#     logMessage "FZF is already installed." "DEBUG"
-
-# fi
-
-# # Check and install Fastfetch
-# if ! command -v fastfetch &> /dev/null; then
-
-#     logMessage "Installing Fastfetch..." "INFO"
-
-#     # Add repository, update and install Fastfetch
-#     run sudo add-apt-repository -y ppa:zhangsongcui3371/fastfetch
-#     run sudo apt-get update
-#     run sudo apt-get install -y fastfetch
-
-#     logMessage "Fastfetch installed successfully." "INFO"
-
-# else
-
-#     logMessage "Fastfetch is already installed." "DEBUG"
-
-# fi
-
-# # Check and install JQuery (jq)
-# if ! command -v jq &> /dev/null; then
-
-#     logMessage "Installing JQuery (jq)..." "INFO"
-
-#     # Install JQuery
-#     run sudo apt-get install -y jq
-
-#     logMessage "JQuery installed successfully." "INFO"
-
-# else
-
-#     logMessage "JQuery is already installed." "DEBUG"
-
-# fi
-
-# # Check and install YQ
-# if ! command -v yq &> /dev/null; then
-
-#     logMessage "Installing YQ..." "INFO"
-
-#     # Install YQ
-#     run sudo apt-get install -y yq
-
-#     logMessage "YQ installed successfully." "INFO"
-
-# else
-
-#     logMessage "YQ is already installed." "DEBUG"
-
-# fi
-
-# # Check and install FD
-# if ! command -v fd &> /dev/null; then
-
-#     logMessage "Installing fd..." "INFO"
-
-#     # Install FD
-#     run sudo apt-get install -y fd-find
-
-#     # Create local bin folder if it does not exist
-#     mkdir -p ~/.local/bin
-
-#     # Create a symlink for fd as it will be installed as fdfind due to clash with other packages
-#     ln -sf /usr/bin/fdfind ~/.local/bin/fd
-
-#     logMessage "FD installed successfully." "INFO"
-
-# else
-
-#     logMessage "FD is already installed." "DEBUG"
-
-# fi
-
-# # Check and install Bat (batcat)
-# if ! command -v batcat &> /dev/null; then
-
-#     logMessage "Installing Bat (batcat)..." "INFO"
-
-#     # Install Bat
-#     run sudo apt-get install -y bat
-
-#     # Create local bin folder if it does not exist
-#     mkdir -p ~/.local/bin
-
-#     # Create a symlink for bat as it will be installed as batcat due to clash with other packages
-#     ln -sf /usr/bin/batcat ~/.local/bin/bat
-
-#     logMessage "Bat installed successfully." "INFO"
-
-# else
-
-#     logMessage "Bat is already installed." "DEBUG"
-
-# fi
-
-# # Check and install Avahi (multicast DNS/DNS service discovery)
-# # Mostly to be able to resolve the hostname if Linux running on Hyper-V on Win 11
-# if ! command -v avahi-daemon &> /dev/null; then
-
-#     logMessage "Installing Avahi..." "INFO"
-
-#     # Install Avahi
-#     run sudo apt-get install -y avahi-daemon
-
-#     # Start and enable Avahi service
-#     run sudo systemctl enable --now avahi-daemon
-
-#     logMessage "Avahi installed successfully." "INFO"
-
-# else
-
-#     logMessage "Avahi is already installed." "DEBUG"
-
-# fi
+}
 
 ### SSH SETUP
 
-# Set external SSH installer script
-sshInstaller=$(dirname "${BASH_SOURCE[0]}")"/ssh-setup-and-config.sh"
-
-# Execute external SSH setup script
-if [[ -f "${sshInstaller}" ]]; then
-
-    logMessage "Set execute permissions on installer script (${sshInstaller})." "DEBUG"
-
-    # Set permissions on the installer script
-    chmod +x "${sshInstaller}"
-
-    logMessage "Executing SSH setup script (${sshInstaller})..." "INFO"
-
-    # Execute SSH installer
-    "${sshInstaller}" ${debug:+-d}
-
-    # Check for errors
-    if [[ $? -eq 0 ]]; then
-
-        logMessage "SSH setup script executed successfully." "INFO"
-
-    else
-
-        logMessage "SSH setup script failed." "ERROR"
-
-    fi
-
-else
-
-    logMessage "SSH setup script ($sshInstaller) is not executable or not found." "ERROR"
-
-fi
+# Runs script to configure SSH
+runLocalScript "ssh-setup-and-config"
 
 ### CLOUD CLIENT SETUP
 
-# Set external SSH installer script
-cloudClientInstaller=$(dirname "${BASH_SOURCE[0]}")"/cloud-client-setup.sh"
+# Runs script to configure cloud and network client(s)
+runLocalScript "cloud-client-setup"
 
-# Execute external SSH setup script
-if [[ -f "${cloudClientInstaller}" ]]; then
 
-    logMessage "Set execute permissions on installer script (${cloudClientInstaller})." "DEBUG"
+personalReposPath="${HOME}/workspace/personal/repos"
+personalGithubUser="norsemangrey"
 
-    # Set permissions on the installer script
-    chmod +x "${cloudClientInstaller}"
+# Function to clone and run an external script
+cloneAndRunExternalScript() {
 
-    logMessage "Executing Cloud client setup script (${cloudClientInstaller})..." "INFO"
+    repoOwner="$1"
+    repoName="$2"
+    repoExecutable="$3"
+    repoDirectory="$4"
 
-    # Execute SSH installer
-    "${cloudClientInstaller}" ${debug:+-d}
+    repoAddress="https://github.com/${repoOwner}/${repoName}.git"
 
-    # Check for errors
-    if [[ $? -eq 0 ]]; then
+    if [ "${repoOwner}" == "${personalGithubUser}" ]; then
 
-        logMessage "Cloud client setup script executed successfully." "INFO"
+        # Use path for personal repositories
+        repoLocalPath="${repoDirectory:-${personalReposPath}}"
 
     else
 
-        logMessage "Cloud client setup script failed." "ERROR"
+        # Use default path for other repositories
+        repoLocalPath="${repoDirectory:-/tmp/repos}"
 
     fi
 
-else
+    logMessage "Cloning '${repoName}' repository and executing '${repoExecutable}'..." "INFO"
 
-    logMessage "Cloud client setup script ($cloudClientInstaller) is not executable or not found." "ERROR"
+    # Clone and execute the 'dotfiles' repository, creating symlinks for configurations files in the repo
+    "${externalCloneAndExecute}" --url "${repoAddress}" --executable "${repoExecutable}" --root "${repoLocalPath}" ${debug:+-d} ${verbose:+-v}
 
-fi
-
+}
 
 ### DOTFILES SETUP
 
-logMessage "Cloning 'dotfiles' repository and executing installer..."
-
-# Set URL and executable for the 'dotfiles' repository
-dotfilesRepo="https://github.com/norsemangrey/.dotfiles.git"
-dotfilesInstaller="deploy-config-linux.sh"
-personalRepoPath="${HOME}/workspace/personal/repos"
-
-# Clone and execute the 'dotfiles' repository, creating symlinks for configurations files in the repo
-"${externalCloneAndExecute}" --url "${dotfilesRepo}" --executable "${dotfilesInstaller}" --root "${personalRepoPath}" ${debug:+-d} ${verbose:+-v}
+# Clone and run the dotfiles setup script
+cloneAndRunExternalScript "${personalGithubUser}" ".dotfiles" "deploy-config-linux.sh"
 
 # Configure install plugins and configure applications
 # (done after dotfiles to get correct paths etc.)
@@ -613,9 +408,40 @@ personalRepoPath="${HOME}/workspace/personal/repos"
 # Git
 
 # Tell Git to use SSH for the following repos
-git -C "${personalRepoPath}"/linux-setup-deployer remote set-url origin github:norsemangrey/linux-setup-deployer.git
-git -C "${personalRepoPath}"/.dotfiles remote set-url origin github:norsemangrey/.dotfiles.git
+# git -C "${repoLocalPath}"/linux-setup-deployer remote set-url origin github:norsemangrey/linux-setup-deployer.git
+# git -C "${repoLocalPath}"/.dotfiles remote set-url origin github:norsemangrey/.dotfiles.git
 
+# Function to set all repositories in a path to use SSH for the origin remote
+setReposToUseSSH() {
+
+    local rootPath="$1"
+    local repoOwner="$2"
+
+    logMessage "Setting all repositories in '${rootPath}' to use SSH for the origin remote..." "INFO"
+
+    # Find all .git directories in path (depth 2 to catch nested repos)
+    find "${rootPath}" -type d -name ".git" | while read -r gitDirectory; do
+
+        local repoPath
+        local repoName
+
+        # Get the parent directory of the .git directory
+        repoPath="$(dirname "${gitDirectory}")"
+
+        # Get repo name from path
+        repoName="$(basename "${repoPath}")"
+
+        # Set repo to use SSH for the origin remote
+        git -C "$repoPath" remote set-url origin "git@github.com:${repoOwner}/${repoName}.git"
+
+        logMessage "Set repo '${repoName}' to use SSH remote." "DEBUG"
+
+    done
+
+}
+
+# Set all personal repositories to use SSH
+setReposToUseSSH "${personalReposPath}" "${personalGithubUser}"
 
 ### TMUX SETUP
 
@@ -625,49 +451,35 @@ tpmDirectory="${tmuxConfigDirectory}/plugins/tpm"
 # Proceed with TPM setup only if the TMUX config directory exists
 if [[ -d "${tmuxConfigDirectory}" ]]; then
 
-    # Install TMUX Plugin Manager (TPM) if not already installed
-    if [[ ! -d "${tpmDirectory}" ]]; then
+    # # Install TMUX Plugin Manager (TPM) if not already installed
+    # if [[ ! -d "${tpmDirectory}" ]]; then
 
-        logMessage "Installing Tmux Plugin Manager (TPM)..." "INFO"
+    #     logMessage "Installing Tmux Plugin Manager (TPM)..." "INFO"
 
-        # Clone the TPM repository
-        git clone https://github.com/tmux-plugins/tpm "${tpmDirectory}"
+    #     # Clone the TPM repository
+    #     git clone https://github.com/tmux-plugins/tpm "${tpmDirectory}"
 
-        logMessage "TPM installed successfully." "INFO"
+    #     logMessage "TPM installed successfully." "INFO"
 
-    else
+    # else
 
-        logMessage "TPM is already installed." "DEBUG"
-    fi
+    #     logMessage "TPM is already installed." "DEBUG"
+    # fi
 
-    logMessage "Installing TPM plugins..." "INFO"
+    # logMessage "Installing TPM plugins..." "INFO"
 
-    # Automatically install TPM plugins
-    "${tpmDirectory}/bin/install_plugins"
+    # # Automatically install TPM plugins
+    # "${tpmDirectory}/bin/install_plugins"
 
-    logMessage "TPM plugins installed." "INFO"
+    # logMessage "TPM plugins installed." "INFO"
+
+    cloneAndRunExternalScript "tmux-plugins" "tpm" "bin/install_plugins" "${tpmDirectory}"
 
 else
 
     logMessage "TMUX config directory not found. Skipping TPM and plugin installation." "WARNING"
 
 fi
-
-# # Install 'libtmux' for Python if not already installed (Python library for interacting with TMUX)
-# if ! python3 -c "import libtmux" &> /dev/null; then
-
-#     logMessage "Installing TMUX Python library (libtmux)..." "INFO"
-
-#     # Install TMUX Python library
-#     run sudo apt-get install -y python3-libtmux
-
-#     logMessage "TMUX Python library (libtmux) installed successfully." "INFO"
-
-# else
-
-#     logMessage "TMUX Python library (libtmux) is already installed." "DEBUG"
-
-# fi
 
 
 ### ZSH SETUP
