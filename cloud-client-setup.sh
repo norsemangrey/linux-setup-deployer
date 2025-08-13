@@ -368,12 +368,12 @@ personalCloudPathOnWindowsHost="/mnt/c/Cloud/personal/"
 # Only run this if /mnt/c is actually mounted
 if mountpoint -q /mnt/c && [ -d "${personalCloudPathOnWindowsHost}" ]; then
 
-    # Ensure log directory exists
-    logPath="${LOG_PATH}/rsync" && mkdir -p "$(dirname "${logPath}")"
-
     # Checks every hour if there are any files (other than lost+found) in the specified directory, and if so,
     # synchronizes them to a destination directory, logging the results.
-    syncCommand="find \"${personalCloudPath}\" -mindepth 1 \\( -name 'lost+found' -prune \\) -o -print | grep -q . && rsync -a --delete --exclude='lost+found' \"${personalCloudPath}/\" \"${personalCloudPathOnWindowsHost}\" >> \"${logPath}/sync.log\" 2>&1"
+    syncCommand="find \"${personalCloudPath}\" -mindepth 1 \\( -name 'lost+found' -prune \\) -o -print | grep -q . && rsync -a --delete --exclude='lost+found' \"${personalCloudPath}/\" \"${personalCloudPathOnWindowsHost}\" >> \"${LOG_PATH}/rsync.log\" 2>&1"
+
+    # Initial sync to ensure everything is up-to-date
+    eval "${syncCommand}"
 
     # Add Cron job if it doesn't already exist
     cronJob="0 * * * * ${syncCommand}"
@@ -387,6 +387,7 @@ if mountpoint -q /mnt/c && [ -d "${personalCloudPathOnWindowsHost}" ]; then
 
         logMessage "Adding cron job to run personal cloud content sync to host every hour." "INFO"
 
+        # Add the cron job to the user's crontab
         ( crontab -l 2>/dev/null; echo "${cronJob}" ) | crontab -
 
     fi
