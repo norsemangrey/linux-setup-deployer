@@ -81,6 +81,8 @@ username="${USER}"
 # Get the IP address of the server
 serverIp=$(hostname -I | awk '{print $1}')
 
+logMessage "Identified user '${username}' @ host '${hostname}'" "DEBUG"
+
 # If the username is "root", ask for confirmation before continuing
 if [ "${username}" == "root" ]; then
 

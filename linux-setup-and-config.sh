@@ -160,14 +160,15 @@ installPackage() {
 
     if ! dpkg -s "${packageName}" &> /dev/null; then
 
-        logMessage "Installing ${packageName}..." "INFO"
+        logMessage "Installing '${packageName}'..." "INFO"
 
         # Perform any pre-installation actions
         preInstallationActions "${packageName}"
 
+        # Check for alternative installation methods
         if alternativeInstallationActions "${packageName}"; then
 
-            logMessage "Alternative installation actions for ${packageName} completed successfully." "INFO"
+            logMessage "Alternative installation for '${packageName}' completed successfully." "DEBUG"
 
         else
 
@@ -179,7 +180,7 @@ installPackage() {
         # Perform any post-installation actions
         postInstallationActions "${packageName}"
 
-        logMessage "Successfully installed package '${packageName}'." "INFO"
+        logMessage "Successfully installed package '${packageName}'." "DEBUG"
 
     else
 
@@ -218,6 +219,8 @@ preInstallationActions() {
 
     local packageName="$1"
 
+    logMessage "Performing pre-installation actions for package '${packageName}'..." "DEBUG"
+
     case "${packageName}" in
 
         "fastfetch")
@@ -242,6 +245,8 @@ preInstallationActions() {
 postInstallationActions() {
 
     local packageName="$1"
+
+    logMessage "Performing post-installation actions for package '${packageName}'..." "DEBUG"
 
     case "${packageName}" in
 
@@ -327,7 +332,7 @@ runLocalScript() {
         # Set permissions on the installer script
         chmod +x "${scriptPath}"
 
-        logMessage "Executing setup script (${scriptName})..." "INFO"
+        logMessage "Executing setup script '${scriptName}'..." "INFO"
 
         # Execute installer script
         "${scriptPath}" ${debug:+-d} ${verbose:+-v}
@@ -335,17 +340,17 @@ runLocalScript() {
         # Check for errors
         if [[ $? -eq 0 ]]; then
 
-            logMessage "Setup script (${scriptName}) executed successfully." "INFO"
+            logMessage "Setup script '${scriptName}' executed successfully." "DEBUG"
 
         else
 
-            logMessage "Setup script (${scriptName}) failed." "ERROR"
+            logMessage "Setup script '${scriptPath}' failed." "ERROR"
 
         fi
 
     else
 
-        logMessage "Setup script (${scriptPath}) is not executable or not found." "ERROR"
+        logMessage "Setup script '${scriptPath}' is not executable or not found." "ERROR"
 
     fi
 
