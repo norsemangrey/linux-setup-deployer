@@ -366,30 +366,28 @@ fi
 personalCloudPathOnWindowsHost="/mnt/c/Cloud/personal/"
 
 # Only run this if /mnt/c is actually mounted
-if [[ mountpoint -q /mnt/c && -d "${personalCloudPathOnWindowsHost}" ]]; then
+if mountpoint -q /mnt/c && [ -d "${personalCloudPathOnWindowsHost}" ]; then
 
     # Ensure log directory exists
-    logPath="${LOG_PATH}/rsync/sync.log" && mkdir -p "$(dirname "${logPath}")"
+    logPath="${LOG_PATH}/rsync" && mkdir -p "$(dirname "${logPath}")"
 
-    # Add Cron job if it doesn't already exist
     # Checks every hour if there are any files (other than lost+found) in the specified directory, and if so,
     # synchronizes them to a destination directory, logging the results.
-    cronJob="0 * * * * find \"${personalCloudPath}\" -mindepth 1 \\( -name 'lost+found' -prune \\) -o -print | grep -q . && rsync -a --delete --exclude='lost+found' \"${personalCloudPath}/\" \"${personalCloudPathOnWindowsHost}\" >> \"$logPath\" 2>&1"
+    syncCommand="find \"${personalCloudPath}\" -mindepth 1 \\( -name 'lost+found' -prune \\) -o -print | grep -q . && rsync -a --delete --exclude='lost+found' \"${personalCloudPath}/\" \"${personalCloudPathOnWindowsHost}\" >> \"${logPath}/sync.log\" 2>&1"
+
+    # Add Cron job if it doesn't already exist
+    cronJob="0 * * * * ${syncCommand}"
 
     # Check if the cron job already exists
-    (crontab -l 2>/dev/null | grep -F "$cronJob") >/dev/null
+    if crontab -l 2>/dev/null | grep -Fq "${cronJob}"; then
 
-    # If the cron job does not exist, add it
-    if [ $? -ne 0 ]; then
-
-        # Add the cron job to the user's crontab
-        (crontab -l 2>/dev/null; echo "$cronJob") | crontab -
-
-        logMessage "Cron job added to run personal cloud content sync to host every hour." "INFO"
+        logMessage "Cron job already exists: ${cronJob}" "INFO"
 
     else
 
-        logMessage "Cron job already exists." "INFO"
+        logMessage "Adding cron job to run personal cloud content sync to host every hour." "INFO"
+
+        ( crontab -l 2>/dev/null; echo "${cronJob}" ) | crontab -
 
     fi
 
