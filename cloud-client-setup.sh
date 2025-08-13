@@ -375,7 +375,7 @@ if mountpoint -q /mnt/c && [ -d "${personalCloudPathOnWindowsHost}" ]; then
     eval "${syncCommand}"
 
     # Define the cron job command with log redirection
-    cronJob="0 * * * * ${syncCommand} >> \"${LOG_PATH}/rsync.log\" 2>&1"
+    cronJob="0 * * * * ${syncCommand} >> \"$HOME/logs/rsync.log\" 2>&1"
 
     # Check if the cron job already exists
     if crontab -l 2>/dev/null | grep -Fq "${cronJob}"; then
