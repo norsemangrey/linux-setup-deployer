@@ -154,220 +154,373 @@ else
 fi
 
 
-# Check and install UFW
-if ! command -v ufw &> /dev/null; then
+installPackage() {
 
-    logMessage "Installing UFW..." "INFO"
+    local packageName="$1"
 
-    # Install JQuery
-    run sudo apt-get install -y ufw
+    if ! dpkg -s "${packageName}" &> /dev/null; then
 
-    logMessage "UFW installed successfully." "INFO"
+        logMessage "Installing ${packageName}..." "INFO"
 
-else
+        # Perform any pre-installation actions
+        preInstallationActions "${packageName}"
 
-    logMessage "UFW is already installed." "DEBUG"
+        if alternativeInstallationActions "${packageName}"; then
 
-fi
+            logMessage "Alternative installation actions for ${packageName} completed successfully." "INFO"
 
-# Check and install ZSH
-if ! command -v zsh &> /dev/null; then
+        else
 
-    logMessage "Installing ZSH..." "INFO"
+            # Install the package
+            run sudo apt-get install -y "${packageName}"
 
-    # Installing ZSH
-    run sudo apt-get install -y zsh
+        fi
 
-    logMessage "ZSH installed successfully." "INFO"
+        # Perform any post-installation actions
+        postInstallationActions "${packageName}"
 
-else
+        logMessage "Successfully installed package '${packageName}'." "INFO"
 
-    logMessage "ZSH is already installed." "DEBUG"
+    else
 
-fi
+        logMessage "Package '${packageName}' is already installed." "DEBUG"
 
-# Check and install Oh-My-Posh
-if ! command -v oh-my-posh &> /dev/null; then
+    fi
 
-    logMessage "Installing Oh-My-Posh..." "INFO"
+}
 
-    # Download Oh-My-Posh
-    sudo wget https://github.com/JanDeDobbeleer/oh-my-posh/releases/latest/download/posh-linux-amd64 -O /usr/local/bin/oh-my-posh
+alternativeInstallationActions() {
 
-    # Set execution permission
-    sudo chmod +x /usr/local/bin/oh-my-posh
+    local packageName="$1"
 
-    logMessage "Oh-My-Posh installed successfully." "INFO"
+    case "${packageName}" in
 
-else
+        "oh-my-posh")
 
-    logMessage "Oh-My-Posh is already installed." "DEBUG"
+            # Download Oh-My-Posh
+            sudo wget https://github.com/JanDeDobbeleer/oh-my-posh/releases/latest/download/posh-linux-amd64 -O /usr/local/bin/oh-my-posh
 
-    run sudo oh-my-posh upgrade
+            return 0
+            ;;
 
-fi
+        *)
+            return 1
 
-# Check and install LSDeluxe (lsd)
-if ! command -v lsd &> /dev/null; then
+            ;;
 
-    logMessage "Installing LSDeluxe (lsd)..." "INFO"
+    esac
 
-    # Install LSDelux
-    run sudo apt-get install -y lsd
+}
 
-    logMessage "LSDeluxe installed successfully." "INFO"
+preInstallationActions() {
 
-else
+    local packageName="$1"
 
-    logMessage "LSDeluxe is already installed." "DEBUG"
+    case "${packageName}" in
 
-fi
+        "fastfetch")
 
-# Check and install TMUX
-if ! command -v tmux &> /dev/null; then
+            # Add repository, update and install Fastfetch
+            run sudo add-apt-repository -y ppa:zhangsongcui3371/fastfetch
+            run sudo apt-get update
 
-    logMessage "Installing TMUX..." "INFO"
+            ;;
 
-    # Install TMUX
-    run sudo apt-get install -y tmux
+        *)
 
-    logMessage "TMUX installed successfully." "INFO"
+            logMessage "No pre-installation actions for package '${packageName}'." "DEBUG"
 
-else
+            ;;
 
-    logMessage "TMUX is already installed." "DEBUG"
+    esac
 
-fi
+}
 
-# Check and install FZF
-if ! command -v fzf &> /dev/null; then
+postInstallationActions() {
 
-    logMessage "Installing FZF..." "INFO"
+    local packageName="$1"
 
-    # Install FZF
-    run sudo apt-get install -y fzf
+    case "${packageName}" in
 
-    logMessage "FZF installed successfully." "INFO"
+        "fd-find")
 
-else
+            # Create a symlink for fd as it will be installed as fdfind due to clash with other packages
+            ln -sf /usr/bin/fdfind ~/.local/bin/fd
 
-    logMessage "FZF is already installed." "DEBUG"
+            ;;
 
-fi
+        "batcat")
 
-# Check and install Fastfetch
-if ! command -v fastfetch &> /dev/null; then
+            # Create a symlink for batcat as it will be installed as bat due to clash with other packages
+            ln -sf /usr/bin/batcat ~/.local/bin/bat
 
-    logMessage "Installing Fastfetch..." "INFO"
+            ;;
 
-    # Add repository, update and install Fastfetch
-    run sudo add-apt-repository -y ppa:zhangsongcui3371/fastfetch
-    run sudo apt-get update
-    run sudo apt-get install -y fastfetch
+        "avahi-daemon")
 
-    logMessage "Fastfetch installed successfully." "INFO"
+            # Start and enable Avahi service
+            run sudo systemctl enable --now avahi-daemon
 
-else
+            ;;
 
-    logMessage "Fastfetch is already installed." "DEBUG"
+        "oh-my-posh")
 
-fi
+            # Set execution permission
+            sudo chmod +x /usr/local/bin/oh-my-posh
 
-# Check and install JQuery (jq)
-if ! command -v jq &> /dev/null; then
+            ;;
 
-    logMessage "Installing JQuery (jq)..." "INFO"
+        *)
 
-    # Install JQuery
-    run sudo apt-get install -y jq
+            logMessage "No post-installation actions for package '${packageName}'." "DEBUG"
 
-    logMessage "JQuery installed successfully." "INFO"
+            ;;
 
-else
+    esac
 
-    logMessage "JQuery is already installed." "DEBUG"
+}
 
-fi
+declare -a packages=(
+    "ufw"
+    "zsh"
+    "lsd"
+    "tmux"
+    "fzf"
+    "fastfetch"
+    "jq"
+    "yq"
+    "fd-find"
+    "bat"
+    "avahi-daemon"
+    "python3-libtmux"
+)
 
-# Check and install YQ
-if ! command -v yq &> /dev/null; then
+# Create local bin folder if it does not exist
+mkdir -p ~/.local/bin
 
-    logMessage "Installing YQ..." "INFO"
+# Loop through packages and install them if not already installed
+for package in "${packages[@]}"; do
 
-    # Install YQ
-    run sudo apt-get install -y yq
+    installPackage "${package}"
 
-    logMessage "YQ installed successfully." "INFO"
+done
 
-else
+# # Check and install UFW
+# if ! command -v ufw &> /dev/null; then
 
-    logMessage "YQ is already installed." "DEBUG"
+#     logMessage "Installing UFW..." "INFO"
 
-fi
+#     # Install JQuery
+#     run sudo apt-get install -y ufw
 
-# Check and install FD
-if ! command -v fd &> /dev/null; then
+#     logMessage "UFW installed successfully." "INFO"
 
-    logMessage "Installing fd..." "INFO"
+# else
 
-    # Install FD
-    run sudo apt-get install -y fd-find
+#     logMessage "UFW is already installed." "DEBUG"
 
-    # Create local bin folder if it does not exist
-    mkdir -p ~/.local/bin
+# fi
 
-    # Create a symlink for fd as it will be installed as fdfind due to clash with other packages
-    ln -sf /usr/bin/fdfind ~/.local/bin/fd
+# # Check and install ZSH
+# if ! command -v zsh &> /dev/null; then
 
-    logMessage "FD installed successfully." "INFO"
+#     logMessage "Installing ZSH..." "INFO"
 
-else
+#     # Installing ZSH
+#     run sudo apt-get install -y zsh
 
-    logMessage "FD is already installed." "DEBUG"
+#     logMessage "ZSH installed successfully." "INFO"
 
-fi
+# else
 
-# Check and install Bat (batcat)
-if ! command -v batcat &> /dev/null; then
+#     logMessage "ZSH is already installed." "DEBUG"
 
-    logMessage "Installing Bat (batcat)..." "INFO"
+# fi
 
-    # Install Bat
-    run sudo apt-get install -y bat
+# # Check and install Oh-My-Posh
+# if ! command -v oh-my-posh &> /dev/null; then
 
-    # Create local bin folder if it does not exist
-    mkdir -p ~/.local/bin
+#     logMessage "Installing Oh-My-Posh..." "INFO"
 
-    # Create a symlink for bat as it will be installed as batcat due to clash with other packages
-    ln -sf /usr/bin/batcat ~/.local/bin/bat
+#     # Download Oh-My-Posh
+#     sudo wget https://github.com/JanDeDobbeleer/oh-my-posh/releases/latest/download/posh-linux-amd64 -O /usr/local/bin/oh-my-posh
 
-    logMessage "Bat installed successfully." "INFO"
+#     # Set execution permission
+#     sudo chmod +x /usr/local/bin/oh-my-posh
 
-else
+#     logMessage "Oh-My-Posh installed successfully." "INFO"
 
-    logMessage "Bat is already installed." "DEBUG"
+# else
 
-fi
+#     logMessage "Oh-My-Posh is already installed." "DEBUG"
 
-# Check and install Avahi (multicast DNS/DNS service discovery)
-# Mostly to be able to resolve the hostname if Linux running on Hyper-V on Win 11
-if ! command -v avahi-daemon &> /dev/null; then
+#     run sudo oh-my-posh upgrade
 
-    logMessage "Installing Avahi..." "INFO"
+# fi
 
-    # Install Avahi
-    run sudo apt-get install -y avahi-daemon
+# # Check and install LSDeluxe (lsd)
+# if ! command -v lsd &> /dev/null; then
 
-    # Start and enable Avahi service
-    run sudo systemctl enable --now avahi-daemon
+#     logMessage "Installing LSDeluxe (lsd)..." "INFO"
 
-    logMessage "Avahi installed successfully." "INFO"
+#     # Install LSDelux
+#     run sudo apt-get install -y lsd
 
-else
+#     logMessage "LSDeluxe installed successfully." "INFO"
 
-    logMessage "Avahi is already installed." "DEBUG"
+# else
 
-fi
+#     logMessage "LSDeluxe is already installed." "DEBUG"
+
+# fi
+
+# # Check and install TMUX
+# if ! command -v tmux &> /dev/null; then
+
+#     logMessage "Installing TMUX..." "INFO"
+
+#     # Install TMUX
+#     run sudo apt-get install -y tmux
+
+#     logMessage "TMUX installed successfully." "INFO"
+
+# else
+
+#     logMessage "TMUX is already installed." "DEBUG"
+
+# fi
+
+# # Check and install FZF
+# if ! command -v fzf &> /dev/null; then
+
+#     logMessage "Installing FZF..." "INFO"
+
+#     # Install FZF
+#     run sudo apt-get install -y fzf
+
+#     logMessage "FZF installed successfully." "INFO"
+
+# else
+
+#     logMessage "FZF is already installed." "DEBUG"
+
+# fi
+
+# # Check and install Fastfetch
+# if ! command -v fastfetch &> /dev/null; then
+
+#     logMessage "Installing Fastfetch..." "INFO"
+
+#     # Add repository, update and install Fastfetch
+#     run sudo add-apt-repository -y ppa:zhangsongcui3371/fastfetch
+#     run sudo apt-get update
+#     run sudo apt-get install -y fastfetch
+
+#     logMessage "Fastfetch installed successfully." "INFO"
+
+# else
+
+#     logMessage "Fastfetch is already installed." "DEBUG"
+
+# fi
+
+# # Check and install JQuery (jq)
+# if ! command -v jq &> /dev/null; then
+
+#     logMessage "Installing JQuery (jq)..." "INFO"
+
+#     # Install JQuery
+#     run sudo apt-get install -y jq
+
+#     logMessage "JQuery installed successfully." "INFO"
+
+# else
+
+#     logMessage "JQuery is already installed." "DEBUG"
+
+# fi
+
+# # Check and install YQ
+# if ! command -v yq &> /dev/null; then
+
+#     logMessage "Installing YQ..." "INFO"
+
+#     # Install YQ
+#     run sudo apt-get install -y yq
+
+#     logMessage "YQ installed successfully." "INFO"
+
+# else
+
+#     logMessage "YQ is already installed." "DEBUG"
+
+# fi
+
+# # Check and install FD
+# if ! command -v fd &> /dev/null; then
+
+#     logMessage "Installing fd..." "INFO"
+
+#     # Install FD
+#     run sudo apt-get install -y fd-find
+
+#     # Create local bin folder if it does not exist
+#     mkdir -p ~/.local/bin
+
+#     # Create a symlink for fd as it will be installed as fdfind due to clash with other packages
+#     ln -sf /usr/bin/fdfind ~/.local/bin/fd
+
+#     logMessage "FD installed successfully." "INFO"
+
+# else
+
+#     logMessage "FD is already installed." "DEBUG"
+
+# fi
+
+# # Check and install Bat (batcat)
+# if ! command -v batcat &> /dev/null; then
+
+#     logMessage "Installing Bat (batcat)..." "INFO"
+
+#     # Install Bat
+#     run sudo apt-get install -y bat
+
+#     # Create local bin folder if it does not exist
+#     mkdir -p ~/.local/bin
+
+#     # Create a symlink for bat as it will be installed as batcat due to clash with other packages
+#     ln -sf /usr/bin/batcat ~/.local/bin/bat
+
+#     logMessage "Bat installed successfully." "INFO"
+
+# else
+
+#     logMessage "Bat is already installed." "DEBUG"
+
+# fi
+
+# # Check and install Avahi (multicast DNS/DNS service discovery)
+# # Mostly to be able to resolve the hostname if Linux running on Hyper-V on Win 11
+# if ! command -v avahi-daemon &> /dev/null; then
+
+#     logMessage "Installing Avahi..." "INFO"
+
+#     # Install Avahi
+#     run sudo apt-get install -y avahi-daemon
+
+#     # Start and enable Avahi service
+#     run sudo systemctl enable --now avahi-daemon
+
+#     logMessage "Avahi installed successfully." "INFO"
+
+# else
+
+#     logMessage "Avahi is already installed." "DEBUG"
+
+# fi
+
+### SSH SETUP
 
 # Set external SSH installer script
 sshInstaller=$(dirname "${BASH_SOURCE[0]}")"/ssh-setup-and-config.sh"
@@ -402,6 +555,7 @@ else
 
 fi
 
+### CLOUD CLIENT SETUP
 
 # Set external SSH installer script
 cloudClientInstaller=$(dirname "${BASH_SOURCE[0]}")"/cloud-client-setup.sh"
@@ -436,6 +590,9 @@ else
 
 fi
 
+
+### DOTFILES SETUP
+
 logMessage "Cloning 'dotfiles' repository and executing installer..."
 
 # Set URL and executable for the 'dotfiles' repository
@@ -458,7 +615,8 @@ personalRepoPath="${HOME}/workspace/personal/repos"
 git -C "${personalRepoPath}"/linux-setup-deployer remote set-url origin github:norsemangrey/linux-setup-deployer.git
 git -C "${personalRepoPath}"/.dotfiles remote set-url origin github:norsemangrey/.dotfiles.git
 
-# TMUX
+
+### TMUX SETUP
 
 tmuxConfigDirectory="${XDG_CONFIG_HOME}/tmux"
 tpmDirectory="${tmuxConfigDirectory}/plugins/tpm"
@@ -494,23 +652,24 @@ else
 
 fi
 
-# Install 'libtmux' for Python if not already installed (Python library for interacting with TMUX)
-if ! python3 -c "import libtmux" &> /dev/null; then
+# # Install 'libtmux' for Python if not already installed (Python library for interacting with TMUX)
+# if ! python3 -c "import libtmux" &> /dev/null; then
 
-    logMessage "Installing TMUX Python library (libtmux)..." "INFO"
+#     logMessage "Installing TMUX Python library (libtmux)..." "INFO"
 
-    # Install TMUX Python library
-    run sudo apt-get install -y python3-libtmux
+#     # Install TMUX Python library
+#     run sudo apt-get install -y python3-libtmux
 
-    logMessage "TMUX Python library (libtmux) installed successfully." "INFO"
+#     logMessage "TMUX Python library (libtmux) installed successfully." "INFO"
 
-else
+# else
 
-    logMessage "TMUX Python library (libtmux) is already installed." "DEBUG"
+#     logMessage "TMUX Python library (libtmux) is already installed." "DEBUG"
 
-fi
+# fi
 
-#ZSH
+
+### ZSH SETUP
 
 # Check if ZSH is installed and set as the default shell if ZSH environment file exists
 if command -v zsh &> /dev/null && [[ -f "$HOME/.zshenv" ]]; then
