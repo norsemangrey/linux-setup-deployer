@@ -40,6 +40,10 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+# =========================
+# === PREPARE ENVIRONMENT =
+# =========================
+# region
 
 # Set external logger- and error handling script paths
 externalLogger=$(dirname "${BASH_SOURCE[0]}")"/utils/logging-and-output-function.sh"
@@ -90,13 +94,245 @@ if [ $? -ne 0 ]; then
 
 fi
 
-# Ensure the system is up-to-date
+# Personal variables
+# TODO: Consider moving out of script
+personalReposPath="${HOME}/workspace/personal/repos"
+personalGithubUser="norsemangrey"
+
+# endregion
+
+# =========================
+# === FUNCTIONS ===========
+# =========================
+# region
+
+# Install a package if not already installed
+installPackage() {
+
+    local packageName="$1"
+
+    if ! dpkg -s "${packageName}" &> /dev/null; then
+
+        logMessage "Installing '${packageName}'..." "INFO"
+
+        # Perform any pre-installation actions
+        preInstallationActions "${packageName}"
+
+        # Check for alternative installation methods
+        if alternativeInstallationActions "${packageName}"; then
+
+            logMessage "Alternative installation for '${packageName}' completed successfully." "DEBUG"
+
+        else
+
+            # Install the package
+            run sudo apt-get install -y "${packageName}"
+
+        fi
+
+        # Perform any post-installation actions
+        postInstallationActions "${packageName}"
+
+        logMessage "Successfully installed package '${packageName}'." "DEBUG"
+
+    else
+
+        logMessage "Package '${packageName}' is already installed." "DEBUG"
+
+    fi
+
+}
+
+# Perform alternative installation actions
+alternativeInstallationActions() {
+
+    local packageName="$1"
+
+    case "${packageName}" in
+
+        "oh-my-posh")
+
+            # Download Oh-My-Posh
+            sudo wget https://github.com/JanDeDobbeleer/oh-my-posh/releases/latest/download/posh-linux-amd64 -O /usr/local/bin/oh-my-posh
+
+            return 0
+            ;;
+
+        *)
+            return 1
+
+            ;;
+
+    esac
+
+}
+
+# Perform pre-installation actions
+preInstallationActions() {
+
+    local packageName="$1"
+
+    logMessage "Performing pre-installation actions for package '${packageName}'..." "DEBUG"
+
+    case "${packageName}" in
+
+        "fastfetch")
+
+            # Add repository, update and install Fastfetch
+            run sudo add-apt-repository -y ppa:zhangsongcui3371/fastfetch
+            run sudo apt-get update
+
+            ;;
+
+        *)
+
+            logMessage "No pre-installation actions for package '${packageName}'." "DEBUG"
+
+            ;;
+
+    esac
+
+}
+
+# Perform post-installation actions
+postInstallationActions() {
+
+    local packageName="$1"
+
+    logMessage "Performing post-installation actions for package '${packageName}'..." "DEBUG"
+
+    case "${packageName}" in
+
+        "fd-find")
+
+            # Create a symlink for fd as it will be installed as fdfind due to clash with other packages
+            ln -sf /usr/bin/fdfind ~/.local/bin/fd
+
+            ;;
+
+        "batcat")
+
+            # Create a symlink for batcat as it will be installed as bat due to clash with other packages
+            ln -sf /usr/bin/batcat ~/.local/bin/bat
+
+            ;;
+
+        "avahi-daemon")
+
+            # Start and enable Avahi service
+            run sudo systemctl enable --now avahi-daemon
+
+            ;;
+
+        "oh-my-posh")
+
+            # Set execution permission
+            sudo chmod +x /usr/local/bin/oh-my-posh
+
+            ;;
+
+        *)
+
+            logMessage "No post-installation actions for package '${packageName}'." "DEBUG"
+
+            ;;
+
+    esac
+
+}
+
+# Run a local script with error handling and logging
+runLocalScript() {
+
+    local scriptName="$1"
+
+    # Set local setup script path
+    scriptPath=$(dirname "${BASH_SOURCE[0]}")"/${scriptName}.sh"
+
+    # Execute local setup script
+    if [[ -f "${scriptPath}" ]]; then
+
+        logMessage "Set execute permissions on installer script (${scriptPath})." "DEBUG"
+
+        # Set permissions on the installer script
+        chmod +x "${scriptPath}"
+
+        logMessage "Executing setup script '${scriptName}'..." "INFO"
+
+        # Execute installer script
+        "${scriptPath}" ${debug:+-d} ${verbose:+-v}
+
+        # Check for errors
+        if [[ $? -eq 0 ]]; then
+
+            logMessage "Setup script '${scriptName}' executed successfully." "DEBUG"
+
+        else
+
+            logMessage "Setup script '${scriptPath}' failed." "ERROR"
+
+        fi
+
+    else
+
+        logMessage "Setup script '${scriptPath}' is not executable or not found." "ERROR"
+
+    fi
+
+}
+
+# Clone and run an external script
+cloneAndRunExternalScript() {
+
+    repoOwner="$1"
+    repoName="$2"
+    repoExecutable="$3"
+    repoDirectory="$4"
+
+    repoAddress="https://github.com/${repoOwner}/${repoName}.git"
+
+    if [ "${repoOwner}" == "${personalGithubUser}" ]; then
+
+        # Use path for personal repositories
+        repoLocalPath="${repoDirectory:-${personalReposPath}}"
+
+    else
+
+        # Use default path for other repositories
+        repoLocalPath="${repoDirectory:-/tmp/repos}"
+
+    fi
+
+    logMessage "Cloning '${repoName}' repository and executing '${repoExecutable}'..." "INFO"
+
+    # Clone and execute the 'dotfiles' repository, creating symlinks for configurations files in the repo
+    "${externalCloneAndExecute}" --url "${repoAddress}" --executable "${repoExecutable}" --root "${repoLocalPath}" ${debug:+-d} ${verbose:+-v}
+
+}
+
+# endregion
+
+logMessage "Starting setup and config script..." "INFO"
+
+# =========================
+# === SYSTEM UPGRADE ======
+# =========================
+# region
+
 logMessage "Updating and upgrading the system..." "INFO"
 
+# Ensure the system is up-to-date
 run sudo apt-get update -y && run sudo apt-get upgrade -y
 
-logMessage "System update and upgrade completed." "INFO"
+# Clean up unnecessary packages
+run sudo apt-get autoremove -y
 
+# endregion
+
+# =========================
+# === LOCALE SETUP ========
+# =========================
+# region
 
 # Ensure required locales are available
 
@@ -153,140 +389,12 @@ else
 
 fi
 
-# Function to install a package if not already installed
-installPackage() {
+#endregion
 
-    local packageName="$1"
-
-    if ! dpkg -s "${packageName}" &> /dev/null; then
-
-        logMessage "Installing '${packageName}'..." "INFO"
-
-        # Perform any pre-installation actions
-        preInstallationActions "${packageName}"
-
-        # Check for alternative installation methods
-        if alternativeInstallationActions "${packageName}"; then
-
-            logMessage "Alternative installation for '${packageName}' completed successfully." "DEBUG"
-
-        else
-
-            # Install the package
-            run sudo apt-get install -y "${packageName}"
-
-        fi
-
-        # Perform any post-installation actions
-        postInstallationActions "${packageName}"
-
-        logMessage "Successfully installed package '${packageName}'." "DEBUG"
-
-    else
-
-        logMessage "Package '${packageName}' is already installed." "DEBUG"
-
-    fi
-
-}
-
-# Function to perform alternative installation actions
-alternativeInstallationActions() {
-
-    local packageName="$1"
-
-    case "${packageName}" in
-
-        "oh-my-posh")
-
-            # Download Oh-My-Posh
-            sudo wget https://github.com/JanDeDobbeleer/oh-my-posh/releases/latest/download/posh-linux-amd64 -O /usr/local/bin/oh-my-posh
-
-            return 0
-            ;;
-
-        *)
-            return 1
-
-            ;;
-
-    esac
-
-}
-
-# Function to perform pre-installation actions
-preInstallationActions() {
-
-    local packageName="$1"
-
-    logMessage "Performing pre-installation actions for package '${packageName}'..." "DEBUG"
-
-    case "${packageName}" in
-
-        "fastfetch")
-
-            # Add repository, update and install Fastfetch
-            run sudo add-apt-repository -y ppa:zhangsongcui3371/fastfetch
-            run sudo apt-get update
-
-            ;;
-
-        *)
-
-            logMessage "No pre-installation actions for package '${packageName}'." "DEBUG"
-
-            ;;
-
-    esac
-
-}
-
-# Function to perform post-installation actions
-postInstallationActions() {
-
-    local packageName="$1"
-
-    logMessage "Performing post-installation actions for package '${packageName}'..." "DEBUG"
-
-    case "${packageName}" in
-
-        "fd-find")
-
-            # Create a symlink for fd as it will be installed as fdfind due to clash with other packages
-            ln -sf /usr/bin/fdfind ~/.local/bin/fd
-
-            ;;
-
-        "batcat")
-
-            # Create a symlink for batcat as it will be installed as bat due to clash with other packages
-            ln -sf /usr/bin/batcat ~/.local/bin/bat
-
-            ;;
-
-        "avahi-daemon")
-
-            # Start and enable Avahi service
-            run sudo systemctl enable --now avahi-daemon
-
-            ;;
-
-        "oh-my-posh")
-
-            # Set execution permission
-            sudo chmod +x /usr/local/bin/oh-my-posh
-
-            ;;
-
-        *)
-
-            logMessage "No post-installation actions for package '${packageName}'." "DEBUG"
-
-            ;;
-
-    esac
-
-}
+# =========================
+# === PACKAGE INSTALL =====
+# =========================
+# region
 
 # Array of packages to install
 declare -a packages=(
@@ -315,109 +423,41 @@ for package in "${packages[@]}"; do
 
 done
 
+# endregion
 
-# Function to run an local script with error handling and logging
-runLocalScript() {
-
-    local scriptName="$1"
-
-    # Set local setup script path
-    scriptPath=$(dirname "${BASH_SOURCE[0]}")"/${scriptName}.sh"
-
-    # Execute local setup script
-    if [[ -f "${scriptPath}" ]]; then
-
-        logMessage "Set execute permissions on installer script (${scriptPath})." "DEBUG"
-
-        # Set permissions on the installer script
-        chmod +x "${scriptPath}"
-
-        logMessage "Executing setup script '${scriptName}'..." "INFO"
-
-        # Execute installer script
-        "${scriptPath}" ${debug:+-d} ${verbose:+-v}
-
-        # Check for errors
-        if [[ $? -eq 0 ]]; then
-
-            logMessage "Setup script '${scriptName}' executed successfully." "DEBUG"
-
-        else
-
-            logMessage "Setup script '${scriptPath}' failed." "ERROR"
-
-        fi
-
-    else
-
-        logMessage "Setup script '${scriptPath}' is not executable or not found." "ERROR"
-
-    fi
-
-}
-
-### SSH SETUP
+# =========================
+# === SSH, CLOUD & MOUNT ==
+# =========================
+# region
 
 # Runs script to configure SSH
 runLocalScript "ssh-setup-and-config"
 
-### CLOUD CLIENT SETUP
-
 # Runs script to configure cloud and network client(s)
 runLocalScript "cloud-client-setup"
 
+# endregion
 
-personalReposPath="${HOME}/workspace/personal/repos"
-personalGithubUser="norsemangrey"
-
-# Function to clone and run an external script
-cloneAndRunExternalScript() {
-
-    repoOwner="$1"
-    repoName="$2"
-    repoExecutable="$3"
-    repoDirectory="$4"
-
-    repoAddress="https://github.com/${repoOwner}/${repoName}.git"
-
-    if [ "${repoOwner}" == "${personalGithubUser}" ]; then
-
-        # Use path for personal repositories
-        repoLocalPath="${repoDirectory:-${personalReposPath}}"
-
-    else
-
-        # Use default path for other repositories
-        repoLocalPath="${repoDirectory:-/tmp/repos}"
-
-    fi
-
-    logMessage "Cloning '${repoName}' repository and executing '${repoExecutable}'..." "INFO"
-
-    # Clone and execute the 'dotfiles' repository, creating symlinks for configurations files in the repo
-    "${externalCloneAndExecute}" --url "${repoAddress}" --executable "${repoExecutable}" --root "${repoLocalPath}" ${debug:+-d} ${verbose:+-v}
-
-}
-
-### DOTFILES SETUP
+# =========================
+# === DOTFILES SETUP ======
+# =========================
+# region
 
 # Clone and run the dotfiles setup script
 cloneAndRunExternalScript "${personalGithubUser}" ".dotfiles" "deploy-config-linux.sh"
 
-# Configure install plugins and configure applications
-# (done after dotfiles to get correct paths etc.)
-
 # Source common environment variables
 [ -f "$HOME/.env" ] && source "$HOME/.env"
 
-# Git
+#endregion
 
-# Tell Git to use SSH for the following repos
-# git -C "${repoLocalPath}"/linux-setup-deployer remote set-url origin github:norsemangrey/linux-setup-deployer.git
-# git -C "${repoLocalPath}"/.dotfiles remote set-url origin github:norsemangrey/.dotfiles.git
+# =========================
+# === GIT REPOS TO SSH ====
+# =========================
+# region
 
-# Function to set all repositories in a path to use SSH for the origin remote
-setReposToUseSSH() {
+# Converts all repositories in a path to use SSH protocol for the origin remote
+convertRepoToSSH() {
 
     local rootPath="$1"
     local repoOwner="$2"
@@ -446,37 +486,23 @@ setReposToUseSSH() {
 }
 
 # Set all personal repositories to use SSH
-setReposToUseSSH "${personalReposPath}" "${personalGithubUser}"
+convertRepoToSSH "${personalReposPath}" "${personalGithubUser}"
 
-### TMUX SETUP
+# endregion
+
+# Install plugins and configure applications
+# (done after dotfiles to get correct paths etc.)
+
+# =========================
+# === TMUX CONFIG =========
+# =========================
+# region
 
 tmuxConfigDirectory="${XDG_CONFIG_HOME}/tmux"
 tpmDirectory="${tmuxConfigDirectory}/plugins"
 
 # Proceed with TPM setup only if the TMUX config directory exists
 if [[ -d "${tmuxConfigDirectory}" ]]; then
-
-    # # Install TMUX Plugin Manager (TPM) if not already installed
-    # if [[ ! -d "${tpmDirectory}" ]]; then
-
-    #     logMessage "Installing Tmux Plugin Manager (TPM)..." "INFO"
-
-    #     # Clone the TPM repository
-    #     git clone https://github.com/tmux-plugins/tpm "${tpmDirectory}"
-
-    #     logMessage "TPM installed successfully." "INFO"
-
-    # else
-
-    #     logMessage "TPM is already installed." "DEBUG"
-    # fi
-
-    # logMessage "Installing TPM plugins..." "INFO"
-
-    # # Automatically install TPM plugins
-    # "${tpmDirectory}/bin/install_plugins"
-
-    # logMessage "TPM plugins installed." "INFO"
 
     cloneAndRunExternalScript "tmux-plugins" "tpm" "bin/install_plugins" "${tpmDirectory}"
 
@@ -486,8 +512,12 @@ else
 
 fi
 
+# endregion
 
-### ZSH SETUP
+# =========================
+# === ZSH CONFIG ==========
+# =========================
+# region
 
 # Check if ZSH is installed and set as the default shell if ZSH environment file exists
 if command -v zsh &> /dev/null && [[ -f "$HOME/.zshenv" ]]; then
@@ -517,4 +547,6 @@ else
 
 fi
 
-logMessage "Installer script completed."
+# endregion
+
+logMessage "Setup and config script completed."
