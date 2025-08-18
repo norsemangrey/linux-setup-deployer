@@ -37,12 +37,19 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+# ===================================
+# === PREPARE ENVIRONMENT ===========
+# ===================================
+# region
+
+# INFRASTRUCTURE SETUP
+
 # Set external logger- and error handling script paths
 externalLogger=$(dirname "${BASH_SOURCE[0]}")"/utils/logging-and-output-function.sh"
 externalErrorHandler=$(dirname "${BASH_SOURCE[0]}")"/utils/error-handling-function.sh"
 
 # Source external logger and error handler (but allow execution without them)
-source "${externalErrorHandler}" "Failed to set up cloud client" || true
+source "${externalErrorHandler}" "Failed to set up cloud/mount" || true
 source "${externalLogger}" || true
 
 # Redirect output functions if not debug enabled
@@ -73,16 +80,26 @@ if [[ $(type -t logMessage) != function ]]; then
 
 fi
 
+# BUSINESS LOGIC SETUP
+
 # Get the username from the $USER environment variable
 username="${USER}"
 
 logMessage "Setting up Personal cloud directory..." "INFO"
 
+# TODO: Consider moving outside script
 # Set the path to the cloud storage directory
 personalCloudPath="${HOME}/cloud/personal"
+workCloudPath="${HOME}/cloud/work"
 
-# Set the path to the DAVFS2 configuration file
-configFile="/etc/davfs2/secrets"
+# endregion
+
+logMessage "Starting cloud client and mount setup..." "INFO"
+
+# ===================================
+# === INSTALL WEBDAV CLIENT =========
+# ===================================
+# region
 
 # Check and install DAVFS2 (mounts a WebDAV resource as a regular file system)
 if ! command -v mount.davfs &> /dev/null; then
@@ -94,10 +111,13 @@ if ! command -v mount.davfs &> /dev/null; then
 
     echo "You might need to hit 'Enter' to continue..."
 
+    # Pre-answer davfs2 questions to avoid prompts
+    echo davfs2 davfs2/use_locks boolean true | sudo debconf-set-selections
+
     # Installing DAVFS2 (run non-interactively)
     run sudo apt-get install -y davfs2
 
-    logMessage "WebDav Client (davfs2) installed successfully." "INFO"
+    logMessage "WebDav Client (davfs2) installed successfully." "DEBUG"
 
     # Add user to the davfs2 group
     sudo usermod -aG davfs2 "${username}"
@@ -108,23 +128,79 @@ else
 
 fi
 
+# endregion
+
+### PERSONAL CLOUD DIRECTORY
+
+logMessage "Setting up personal cloud directory..." "INFO"
+
+# ===================================
+# === CHECK WEBDAV CONFIGURATION ====
+# ===================================
+# region
+
 # Create a directory for the cloud storage
 mkdir -p "${personalCloudPath}"
 
-# Prompt the user for the WebDav entry or continue
-read -p "Do you want to make a new entry to the WebDav client (davfs2) configuration? (y/N): " 2>&1 confirm
+# Set the path to the DAVFS2 configuration file
+configFile="/etc/davfs2/secrets"
+
+### CHECK EXISTING CONFIGURATION
+
+logMessage "Checking DAVFS2 configuration..." "INFO"
+
+# Check that the DAVFS2 configuration file exists
+if [[ -f "${configFile}" ]]; then
+
+    # Get the address of any entry in the DAVFS2 configuration file
+    existingEntry=$(grep -v '^#' "${configFile}" | grep -v '^[[:space:]]*$' | awk '{print $1}')
+
+fi
+
+# Check if an entry was found
+if [[ -n "${existingEntry}" ]]; then
+
+    logMessage "Existing WebDav address found: '${existingEntry}'" "INFO"
+
+    # Prompt the user: Enter to continue (default), Y to add a new entry
+    read -p "Press 'Enter' to continue, or type 'Y/y' to add a new entry to the WebDav client configuration: " 2>&1 confirm
+
+else
+
+    logMessage "No existing WebDav configuration entry found." "DEBUG"
+
+    # Prompt the user: Enter to add a new entry (default), N to skip
+    read -p "Press 'Enter' to add a new entry to the WebDav client configuration, or type 'N/n' to skip: " 2>&1 confirm
+
+    # If user hits Enter, set confirm to "y"
+    if [[ -z "$confirm" ]]; then
+        confirm="y"
+    fi
+
+fi
+
+# endregion
+
+# ===================================
+# === CREATE WEBDAV CONFIGURATION ===
+# ===================================
+# region
+
+### PROMPT USER FOR NEW ENTRY
 
 # Check the user's response
 if [[ "$confirm" =~ ^[Yy]$ ]]; then
 
-    while [[ -z "$url" || "$retry" =~ ^[Yy]$ ]]; do
+    logMessage "Adding new WebDav configuration entry..." "INFO"
+
+    while [[ -z "$url" || "$retry" =~ ^[Rr]$ ]]; do
 
         echo "To add a new WebDav folder mount, you need to provide the following information:"
 
         # Proceed with prompting the user for the WebDav information
-        read -p "Enter the address (e.g., 'cloud.domain.com'): " 2>&1 webDavAddress
-        read -p "Enter the username: " 2>&1 webDavUsername
-        read -s -p "Enter the password: " 2>&1 webDavPassword
+        read -p "Address (e.g., 'cloud.domain.com'): " 2>&1 webDavAddress
+        read -p "Username: " 2>&1 webDavUsername
+        read -s -p "Password: " 2>&1 webDavPassword
 
         echo # Move to a new line after the password input
 
@@ -135,14 +211,19 @@ if [[ "$confirm" =~ ^[Yy]$ ]]; then
         echo "URL:      ${url}"
         echo "Username: ${webDavUsername}"
         echo "Password: ********"
-        read -p "Do you want to enter the information again? (y/N): " 2>&1 retry
+        read -p "Press 'Enter' to continue or 'R/r' to re-enter the information: " 2>&1 retry
+
+        # If user hits Enter or types N/n, break the loop
+        if [[ -z "$retry" || "$retry" =~ ^[Nn]$ ]]; then
+            break
+        fi
 
     done
 
     # Check if the URL already exists in the configuration file
     if grep -q "^${url}" "${configFile}"; then
 
-        logMessage "The URL '${url}' already exists in the configuration file (${configFile})." "INFO"
+        logMessage "The URL '${url}' already exists in the configuration file." "INFO"
 
     else
 
@@ -152,7 +233,7 @@ if [[ "$confirm" =~ ^[Yy]$ ]]; then
         # Append the string to the configuration file
         echo "${configEntry}" | sudo tee -a "${configFile}" > /dev/null
 
-        logMessage "Entry successfully added to configuration file (${configFile})." "INFO"
+        logMessage "Entry for WebDav added to configuration file (${configFile})." "INFO"
 
     fi
 
@@ -169,7 +250,7 @@ if [[ "$confirm" =~ ^[Yy]$ ]]; then
         # Append the string to the fstab
         echo "${fstabEntry}" | sudo tee -a /etc/fstab > /dev/null
 
-        logMessage "Entry successfully added to fstab (/etc/fstab)." "INFO"
+        logMessage "Entry for WebDav mount added to fstab (/etc/fstab)." "INFO"
 
         # Reload the systemd manager configuration
         sudo systemctl daemon-reload
@@ -182,17 +263,43 @@ if [[ "$confirm" =~ ^[Yy]$ ]]; then
 else
 
     # Skip the operation
-    echo "Operation canceled. No changes were made to WebDav client configuration."
+    logMessage "No changes were made to WebDav client configuration." "INFO"
 
 fi
 
+# endregion
 
 ### WORK CLOUD DIRECTORY
 
 logMessage "Setting up Work cloud directory..." "INFO"
 
-# Set the path to the cloud storage directory
-workCloudPath="${HOME}/cloud/work"
+# ===================================
+# === INSTALL CIFS SHARE UTILS ======
+# ===================================
+# region
+
+# Check and install CIFS utilities (used for mounting SMB shares)
+if ! command -v mount.cifs &> /dev/null; then
+
+    logMessage "Installing CIFS Share Utilities (cifs-utils)..." "INFO"
+
+    # Installing cifs-utils (run non-interactively)
+    run sudo apt-get install -y cifs-utils
+
+    logMessage "CIFS Share Utilities (cifs-utils) installed successfully." "DEBUG"
+
+else
+
+    logMessage "CIFS Share Utilities (cifs-utils) is already installed." "DEBUG"
+
+fi
+
+# endregion
+
+# ===================================
+# === WINDOWS SHARE MOUNT POINT =====
+# ===================================
+# region
 
 # Check if '/mnt/c' is already mounted
 if mountpoint -q /mnt/c; then
@@ -201,37 +308,25 @@ if mountpoint -q /mnt/c; then
 
 else
 
-    # Check and install CIFS utilities (used for mounting SMB shares)
-    if ! command -v mount.cifs &> /dev/null; then
-
-        logMessage "Installing CIFS Share Utilities (cifs-utils)..." "INFO"
-
-        # Installing cifs-utils (run non-interactively)
-        run sudo apt-get install -y cifs-utils
-
-
-        logMessage "CIFS Share Utilities (cifs-utils) installed successfully." "INFO"
-
-    else
-
-        logMessage "CIFS Share Utilities (cifs-utils) is already installed." "DEBUG"
-
-    fi
-
     # Prompt the user for the Windows share credentials
-    read -p "Do you want to set up a mountpoint for a Windows share (C$)? (y/N): " 2>&1 confirm
+    read -p "Press 'Enter' to set up a mountpoint for a Windows share (C$), or 'N/n' to skip: " 2>&1 confirm
+
+    # If user hits Enter, set confirm to "y"
+    if [[ -z "$confirm" ]]; then
+        confirm="y"
+    fi
 
     # Check the user's response
     if [[ "$confirm" =~ ^[Yy]$ ]]; then
 
-        while [[ -z "$smbHost" || -z "$smbUsername" || -z "$smbPassword" || "$retry" =~ ^[Yy]$ ]]; do
+        while [[ -z "$smbHost" || -z "$smbUsername" || -z "$smbPassword" || "$retry" =~ ^[Rr]$ ]]; do
 
             echo "To mount the Windows share, you need to provide the following information:"
 
             # Proceed with prompting the user for the host and credential information
-            read -p "Enter the hostname or IP address of the Windows host: " 2>&1 smbHost
-            read -p "Enter the Windows username: " 2>&1 smbUsername
-            read -s -p "Enter the Windows password: " 2>&1 smbPassword
+            read -p "Hostname or IP address of the Windows host: " 2>&1 smbHost
+            read -p "Windows username: " 2>&1 smbUsername
+            read -s -p "Windows password: " 2>&1 smbPassword
 
             echo # Move to a new line after the password input
 
@@ -239,7 +334,12 @@ else
             echo "Host:     ${smbHost}"
             echo "Username: ${smbUsername}"
             echo "Password: ********"
-            read -p "Do you want to enter the information again? (y/N): " 2>&1 retry
+            read -p "Press 'Enter' to continue or 'R/r' to re-enter the information: " 2>&1 retry
+
+            # If user hits Enter or types N/n, break the loop
+            if [[ -z "$retry" || "$retry" =~ ^[Nn]$ ]]; then
+                break
+            fi
 
         done
 
@@ -283,7 +383,7 @@ EOF
 
         fi
 
-        logMessage "Windows share mounted successfully." "INFO"
+        logMessage "Windows share mounted successfully." "DEBUG"
 
         # Add fstab line to ensure mount persists across reboots
 
@@ -303,18 +403,25 @@ EOF
             # Append the string to the fstab
             echo "${fstabEntry}" | sudo tee -a /etc/fstab > /dev/null
 
-            logMessage "Entry successfully added to fstab (/etc/fstab)." "INFO"
+            logMessage "Entry successfully added to fstab (/etc/fstab)." "DEBUG"
 
         fi
 
     else
 
         # Skip the operation
-        echo "Operation canceled. No new Windows share mountpoint configured."
+        logMessage "No new Windows share mountpoint configured."
 
     fi
 
 fi
+
+# endregion
+
+# ===================================
+# === SYMLINK TO CLOUD DIRECTORY ====
+# ===================================
+# region
 
 logMessage "Checking for Windows symlink ('C:/Cloud/work') in '/mnt/c/Cloud'..." "INFO"
 
@@ -334,42 +441,52 @@ logMessage "Found Windows symlink ('C:/Cloud/work') in '/mnt/c/Cloud'." "DEBUG"
 # Read the target of the symlink
 winTarget=$(readlink "/mnt/c/Cloud/work")
 
-logMessage "Original Windows symlink target: '$winTarget'" "DEBUG"
+logMessage "Original Windows symlink target: '${winTarget}'" "DEBUG"
 
 # Convert Windows-style path (/??/C:/Users/...) → Linux-style (/mnt/c/Users/...)
-linuxTarget=$(echo "$winTarget" | sed -E 's|^/..?/([A-Za-z]):|/mnt/\L\1|')
+linuxTarget=$(echo "${winTarget}" | sed -E 's|^/..?/([A-Za-z]):|/mnt/\L\1|')
 
-logMessage "Converted to Linux target: '$linuxTarget'" "DEBUG"
+logMessage "Converted Windows symlink to Linux target: '${linuxTarget}'" "DEBUG"
 
 # Check if the Linux symlink target already exists
 if [[ -e "${workCloudPath}" || -L "${workCloudPath}" ]]; then
 
-    logMessage "Symlink '${workCloudPath} → $linuxTarget' already exists." "INFO"
+    logMessage "Symlink '${workCloudPath} → ${linuxTarget}' already exists." "INFO"
 
 else
 
     # Create the Linux-native symlink pointing to the resolved Windows share path
-    if ! ln -s "$linuxTarget" "${workCloudPath}"; then
+    if ! ln -s "${linuxTarget}" "${workCloudPath}"; then
 
-        logMessage "Failed to create symlink '${workCloudPath} → $linuxTarget'" "ERROR"
+        logMessage "Failed to create symlink '${workCloudPath} → ${linuxTarget}'" "ERROR"
 
         exit 1
 
     fi
 
-    logMessage "Symlink created: '${workCloudPath} → $linuxTarget'" "INFO"
+    logMessage "Symlink created: '${workCloudPath} → ${linuxTarget}'" "INFO"
 
 fi
 
+# endregion
+
+# ===================================
+# === COPY PERSONAL CLOUD TO HOST ===
+# ===================================
+# region
 
 # Path on Windows host for personal cloud sync
 personalCloudPathOnWindowsHost="/mnt/c/Cloud/personal/"
+
+logMessage "Setting up personal cloud sync to Windows host..." "INFO"
 
 # Only run this if /mnt/c is actually mounted
 if mountpoint -q /mnt/c && [ -d "${personalCloudPathOnWindowsHost}" ]; then
 
     # Define the sync command without log redirection for immediate execution
     syncCommand="find \"${personalCloudPath}\" -mindepth 1 \\( -name 'lost+found' -prune \\) -o -print | grep -q . && rsync -a --delete --exclude='lost+found' \"${personalCloudPath}/\" \"${personalCloudPathOnWindowsHost}\""
+
+    logMessage "Sync command: ${syncCommand}" "DEBUG"
 
     # Initial sync to ensure everything is up-to-date (no log redirection)
     eval "${syncCommand}"
@@ -380,11 +497,11 @@ if mountpoint -q /mnt/c && [ -d "${personalCloudPathOnWindowsHost}" ]; then
     # Check if the cron job already exists
     if crontab -l 2>/dev/null | grep -Fq "${cronJob}"; then
 
-        logMessage "Cron job already exists: ${cronJob}" "INFO"
+        logMessage "Cron job already exists: ${cronJob}" "DEBUG"
 
     else
 
-        logMessage "Adding cron job to run personal cloud content sync to host every hour." "INFO"
+        logMessage "Adding cron job to run personal cloud content sync to host every hour..." "INFO"
 
         # Add the cron job to the user's crontab
         ( crontab -l 2>/dev/null; echo "${cronJob}" ) | crontab -
@@ -393,8 +510,10 @@ if mountpoint -q /mnt/c && [ -d "${personalCloudPathOnWindowsHost}" ]; then
 
 else
 
-    logMessage "Windows share mountpoint not mounted or personal cloud directory does not exist. Skipping personal cloud sync and cron job setup." "INFO"
+    logMessage "Windows share mountpoint not mounted or personal cloud directory does not exist. Skipping personal cloud sync and cron job setup." "WARNING"
 
 fi
+
+# endregion
 
 exit 0

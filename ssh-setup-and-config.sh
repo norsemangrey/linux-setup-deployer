@@ -39,6 +39,13 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+# ===================================
+# === PREPARE ENVIRONMENT ===========
+# ===================================
+# region
+
+# INFRASTRUCTURE SETUP
+
 # Set external logger- and error handling script paths
 externalLogger=$(dirname "${BASH_SOURCE[0]}")"/utils/logging-and-output-function.sh"
 externalErrorHandler=$(dirname "${BASH_SOURCE[0]}")"/utils/error-handling-function.sh"
@@ -75,11 +82,13 @@ if [[ $(type -t logMessage) != function ]]; then
 
 fi
 
-# Get the username from the $USER environment variable
+# BUSINESS LOGIC SETUP
+
+# Get the username from environment variable
 username="${USER}"
 
-# Get the IP address of the server
-serverIp=$(hostname -I | awk '{print $1}')
+# Get the IP address of the machine
+address=$(hostname -I | awk '{print $1}')
 
 logMessage "Identified user '${username}' @ host '$(hostname)'" "DEBUG"
 
@@ -99,6 +108,15 @@ if [ "${username}" == "root" ]; then
     fi
 
 fi
+
+#endregion
+
+logMessage "Starting SSH setup and config..." "INFO"
+
+# ===================================
+# === INSTALL & START SSH ===========
+# ===================================
+# region
 
 # Check if OpenSSH server is installed
 if dpkg -l | grep -q openssh-server; then
@@ -129,6 +147,13 @@ else
 
 fi
 
+# endregion
+
+# ===================================
+# === CONFIGURE FIREWALL ============
+# ===================================
+# region
+
 # Check if UFW is installed and SSH rule exists
 if command -v ufw >/dev/null; then
 
@@ -155,6 +180,13 @@ else
 
 fi
 
+# endregion
+
+# ===================================
+# === INSTALL KEYCHAIN ==============
+# ===================================
+# region
+
 # Check if Keychain is installed
 if command -v keychain &> /dev/null; then
 
@@ -168,6 +200,13 @@ else
     run sudo apt-get update && run sudo apt-get install -y keychain
 
 fi
+
+# endregion
+
+# ===================================
+# === CLIENT SSH AUTHENTICATION =====
+# ===================================
+# region
 
 logMessage "Setting up SSH key-based authentication for '${username}'..." "INFO"
 
@@ -198,19 +237,18 @@ initialKeyCount=$(wc -l < /home/"${username}"/.ssh/authorized_keys 2>/dev/null |
 if [ $initialKeyCount -gt 0 ]; then
 
     # Prompt user to add new key or continue
-    echo "Authorized keys file already contains one or more entires. Do you want to add a new client or continue?"
-    echo -e "\e[33mWARNING: Continuing the script will disable SSH password login, make sure the existing client public key is correct."
-    read -p "Press 'Enter' to add a new client key or 'C' to continue: " 2>&1 reply
+    echo "The 'Authorized Keys' file already contains one or more entries. Do you want to add a new key entry?"
+    echo -e "\e[33mWARNING: Continuing the script will disable SSH password login, ensure the existing client public key is correct."
+    read -p "Press 'Enter' to continue or 'Y/y' to add a new client key: " reply
 
-    # If "Cc" exit the loop and continue the script
-    if [[ "${reply}" =~ ^[Cc]$ ]]; then
+    # If "N" or "n", set flag to add new client key
+    if [[ "${reply}" =~ ^[Yy]$ ]]; then
 
-        logMessage "Continuing with existing client entires." "DEBUG"
+        copyKey=true
 
     else
 
-        # Set flag
-        copyKey=true
+        logMessage "Continuing with existing client entries." "DEBUG"
 
     fi
 
@@ -227,7 +265,8 @@ while [[ "$copyKey" == true ]]; do
     logMessage "Waiting for new client public key..." "INFO"
 
     # Prompt user to copy the public key from the client computer
-    echo "Please use the 'ssh-copy-id' command on your client machine to copy client public key to this server (example: 'ssh-copy-id ${username}@${serverIp}' or 'ssh-copy-id ${username}@$(hostname)')."
+    echo "Please use the 'ssh-copy-id' command on your client machine to copy client public key to this server."
+    echo "Example: 'ssh-copy-id ${username}@${address}' or 'ssh-copy-id ${username}@$(hostname)'."
     read -p "Press 'Enter' after copying the public key to continue..." 2>&1
 
     # Get the current line count
@@ -248,7 +287,14 @@ while [[ "$copyKey" == true ]]; do
 
 done
 
-logMessage "Backing up existing SSH configuration and disabling root login and password authentication..."
+# endregion
+
+# ===================================
+# === SSH CONFIGURATION =============
+# ===================================
+# region
+
+logMessage "Backing up existing SSH config and disabling root login and password authentication..."
 
 # Backup existing SSH configuration
 timestamp=$(date +"%Y-%m-%d_%H-%M-%S")
@@ -307,9 +353,11 @@ else
 
 fi
 
-# Print success message
-logMessage "SSH successfully enabled and key-based authentication configured for user '${username}'." "INFO"
+# endregion
 
-echo "You can now log in using the private key corresponding to the provided or existing public key."
+logMessage "SSH enabled and key-based authentication configured for user '${username}'." "INFO"
+
+# Inform user about login
+echo "You can now log in using the private key corresponding to the provided- or existing public key."
 
 exit 0

@@ -45,6 +45,8 @@ done
 # =========================
 # region
 
+# INFRASTRUCTURE SETUP
+
 # Set external logger- and error handling script paths
 externalLogger=$(dirname "${BASH_SOURCE[0]}")"/utils/logging-and-output-function.sh"
 externalErrorHandler=$(dirname "${BASH_SOURCE[0]}")"/utils/error-handling-function.sh"
@@ -82,6 +84,8 @@ run() {
 
 }
 
+# BUSINESS LOGIC SETUP
+
 # Check if sudo password is valid (not expired)
 sudo -v
 
@@ -94,8 +98,8 @@ if [ $? -ne 0 ]; then
 
 fi
 
-# Personal variables
 # TODO: Consider moving out of script
+# Personal variables
 personalReposPath="${HOME}/workspace/personal/repos"
 personalGithubUser="norsemangrey"
 
