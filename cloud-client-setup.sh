@@ -153,7 +153,7 @@ logMessage "Checking DAVFS2 configuration..." "INFO"
 if [[ -f "${configFile}" ]]; then
 
     # Get the address of any entry in the DAVFS2 configuration file
-    existingEntry=$(grep -v '^#' "${configFile}" | grep -v '^[[:space:]]*$' | awk '{print $1}')
+    existingEntry=$(sudo grep -v '^#' "${configFile}" | grep -v '^[[:space:]]*$' | awk '{print $1}')
 
 fi
 

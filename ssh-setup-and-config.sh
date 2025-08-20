@@ -239,7 +239,7 @@ if [ $initialKeyCount -gt 0 ]; then
     # Prompt user to add new key or continue
     echo "The 'Authorized Keys' file already contains one or more entries. Do you want to add a new key entry?"
     echo -e "\e[33mWARNING: Continuing the script will disable SSH password login, ensure the existing client public key is correct."
-    read -p "Press 'Enter' to continue or 'Y/y' to add a new client key: " reply
+    read -p "Press 'Enter' to continue or 'Y/y' to add a new client key: " 2>&1 reply
 
     # If "N" or "n", set flag to add new client key
     if [[ "${reply}" =~ ^[Yy]$ ]]; then
