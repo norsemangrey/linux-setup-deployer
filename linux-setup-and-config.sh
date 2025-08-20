@@ -508,7 +508,7 @@ tpmDirectory="${tmuxConfigDirectory}/plugins"
 # Proceed with TPM setup only if the TMUX config directory exists
 if [[ -d "${tmuxConfigDirectory}" ]]; then
 
-    cloneAndRunExternalScript "tmux-plugins" "tpm" "bin/install_plugins" "${tpmDirectory}"
+    cloneAndRunExternalScript "tmux-plugins" "tpm" "bin/install_plugins" "${tpmDirectory}" > /dev/null 2>&1
 
 else
 
