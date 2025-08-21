@@ -389,7 +389,7 @@ if [ ${#missingLocales[@]} -ne 0 ]; then
 
 else
 
-    echo "All required locales are already available." "DEBUG"
+    logMessage "All required locales are already available." "DEBUG"
 
 fi
 

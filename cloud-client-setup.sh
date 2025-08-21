@@ -245,7 +245,7 @@ if [[ "$confirm" =~ ^[Yy]$ ]]; then
     else
 
         # Create the fstab entry string
-        fstabEntry="${url} ${personalCloudPath} davfs user,rw,auto 0 0"
+        fstabEntry="${url} ${personalCloudPath} davfs user,rw,auto,uid=1000,gid=1000,file_mode=0600,dir_mode=0700 0 0"
 
         # Append the string to the fstab
         echo "${fstabEntry}" | sudo tee -a /etc/fstab > /dev/null
