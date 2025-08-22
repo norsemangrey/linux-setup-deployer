@@ -214,7 +214,7 @@ postInstallationActions() {
 
             ;;
 
-        "batcat")
+        "bat")
 
             # Create a symlink for batcat as it will be installed as bat due to clash with other packages
             ln -sf /usr/bin/batcat ~/.local/bin/bat
