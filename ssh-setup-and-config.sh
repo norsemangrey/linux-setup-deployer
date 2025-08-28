@@ -203,6 +203,47 @@ fi
 
 # endregion
 
+# Check if pass is installed
+if command -v pass &> /dev/null; then
+
+    logMessage "Pass is already installed." "DEBUG"
+
+else
+
+    logMessage "Installing Pass - The Standard Unix Password Manager..." "INFO"
+
+    # Install Pass - The Standard Unix Password Manager
+    run sudo apt-get update && run sudo apt-get install -y pass
+
+fi
+
+
+logMessage "Generating a new GPG key..." "INFO"
+
+# Generate GPG key (semi-automated)
+gpg --full-generate-key
+
+logMessage "Fetching the last generated GPG key..." "INFO"
+
+# Get the last generated key’s fingerprint
+KEY_ID=$(gpg --list-secret-keys --keyid-format LONG | grep 'sec' | tail -n1 | awk '{print $2}' | cut -d'/' -f2)
+
+if [[ -z "$KEY_ID" ]]; then
+
+    logMessage "No GPG key found. Did you cancel key generation?" "ERROR"
+
+else
+
+    logMessage "Found GPG Key ID: $KEY_ID" "DEBUG"
+
+    logMessage "Initializing Password Manager with GPG key..." "INFO"
+
+    # Initialize pass with this key
+    pass init "$KEY_ID"
+
+fi
+
+
 # ===================================
 # === CLIENT SSH AUTHENTICATION =====
 # ===================================
