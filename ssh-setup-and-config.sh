@@ -183,7 +183,7 @@ fi
 # endregion
 
 # ===================================
-# === INSTALL KEYCHAIN ==============
+# === INSTALL KEYCHAIN & PASS =======
 # ===================================
 # region
 
@@ -201,8 +201,6 @@ else
 
 fi
 
-# endregion
-
 # Check if pass is installed
 if command -v pass &> /dev/null; then
 
@@ -217,6 +215,12 @@ else
 
 fi
 
+# endregion
+
+# ===================================
+# === INITIALIZE GPG KEY ============
+# ===================================
+# region
 
 logMessage "Generating a new GPG key..." "INFO"
 
@@ -226,23 +230,24 @@ gpg --full-generate-key
 logMessage "Fetching the last generated GPG key..." "INFO"
 
 # Get the last generated key’s fingerprint
-KEY_ID=$(gpg --list-secret-keys --keyid-format LONG | grep 'sec' | tail -n1 | awk '{print $2}' | cut -d'/' -f2)
+keyId=$(gpg --list-secret-keys --keyid-format LONG | grep 'sec' | tail -n1 | awk '{print $2}' | cut -d'/' -f2)
 
-if [[ -z "$KEY_ID" ]]; then
+if [[ -z "${keyId}" ]]; then
 
-    logMessage "No GPG key found. Did you cancel key generation?" "ERROR"
+    logMessage "No GPG key found. Key generation canceled by user or failed." "ERROR"
 
 else
 
-    logMessage "Found GPG Key ID: $KEY_ID" "DEBUG"
+    logMessage "Found GPG Key ID: ${keyId}" "DEBUG"
 
     logMessage "Initializing Password Manager with GPG key..." "INFO"
 
     # Initialize pass with this key
-    pass init "$KEY_ID"
+    pass init "${keyId}"
 
 fi
 
+# endregion
 
 # ===================================
 # === CLIENT SSH AUTHENTICATION =====
