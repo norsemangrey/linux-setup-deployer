@@ -208,7 +208,7 @@ if command -v pass &> /dev/null; then
 
 else
 
-    logMessage "Installing Pass - The Standard Unix Password Manager..." "INFO"
+    logMessage "Installing Pass Password Manager..." "INFO"
 
     # Install Pass - The Standard Unix Password Manager
     run sudo apt-get update && run sudo apt-get install -y pass
@@ -218,32 +218,75 @@ fi
 # endregion
 
 # ===================================
-# === INITIALIZE GPG KEY ============
+# === CREATE KEY & INITIALIZE PASS ==
 # ===================================
 # region
 
-logMessage "Generating a new GPG key..." "INFO"
+logMessage "Initializing 'Pass' Password Manager..." "INFO"
 
-# Generate GPG key (semi-automated)
-gpg --full-generate-key
+# Check if Pass is already initialized
+if [[ -f "${HOME}/.password-store/.gpg-id" ]]; then
 
-logMessage "Fetching the last generated GPG key..." "INFO"
-
-# Get the last generated key’s fingerprint
-keyId=$(gpg --list-secret-keys --keyid-format LONG | grep 'sec' | tail -n1 | awk '{print $2}' | cut -d'/' -f2)
-
-if [[ -z "${keyId}" ]]; then
-
-    logMessage "No GPG key found. Key generation canceled by user or failed." "ERROR"
+    logMessage "Pass is already initialized." "DEBUG"
 
 else
 
-    logMessage "Found GPG Key ID: ${keyId}" "DEBUG"
+    logMessage "Checking for existing GPG keys..." "INFO"
 
-    logMessage "Initializing Password Manager with GPG key..." "INFO"
+    # Check for existing GPG keys
+    existingGpgKeys=$(gpg --list-secret-keys --keyid-format LONG | grep 'sec')
 
-    # Initialize pass with this key
-    pass init "${keyId}"
+    # Check if any existing GPG keys were found
+    if [[ -n "${existingGpgKeys}" ]]; then
+
+        logMessage "Existing GPG keys found." "DEBUG"
+
+        echo "You already have one or more GPG keys:"
+
+        # List existing GPG keys
+        gpg --list-secret-keys --keyid-format LONG
+
+    fi
+
+    # Prompt the user: Enter to continue (default), Y to add a new entry
+    read -p "Press 'Enter' to add a new GPG key, or type 'N/n' to continue without adding: " 2>&1 confirm
+
+    # If user hits Enter, set confirm to "y"
+    if [[ -z "$confirm" ]]; then
+        confirm="y"
+    fi
+
+    # If user confirmed, generate a new GPG key
+    if [[ "${confirm}" =~ ^[Yy]$ ]]; then
+
+        logMessage "Generating a new GPG key..." "INFO"
+
+        # Generate GPG key (semi-automated)
+        gpg --batch --pinentry-mode=ask --generate-key gpg_batch.txt
+        #gpg --full-generate-key
+
+    fi
+
+    logMessage "Fetching the last generated GPG key..." "INFO"
+
+    # Get the last generated key’s fingerprint
+    keyId=$(gpg --list-secret-keys --keyid-format LONG | grep 'sec' | tail -n1 | awk '{print $2}' | cut -d'/' -f2)
+
+    # Check if the key ID is empty
+    if [[ -z "${keyId}" ]]; then
+
+        logMessage "No GPG key found. Cannot initialize password manager." "ERROR"
+
+    else
+
+        logMessage "Found GPG Key ID: ${keyId}" "DEBUG"
+
+        logMessage "Initializing Password Manager with GPG key..." "INFO"
+
+        # Initialize pass with this key
+        pass init "${keyId}"
+
+    fi
 
 fi
 

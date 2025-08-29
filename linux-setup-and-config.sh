@@ -456,6 +456,94 @@ cloneAndRunExternalScript "${personalGithubUser}" ".dotfiles" "deploy-config-lin
 #endregion
 
 # =========================
+# === CERTIFICATE SETUP ===
+# =========================
+# region
+
+# Define certificate search locations
+certificateLocations=(
+    "${HOME}/cloud/work/setup/certificates"
+)
+
+logMessage "Checking for certificates in specified locations..." "INFO"
+
+# Initialize flag to track if any certificates were found
+certsFound=false
+
+# Loop through each certificate location
+for certLocation in "${certificateLocations[@]}"; do
+
+    # Check if the directory exists
+    if [[ -d "${certLocation}" ]]; then
+
+        logMessage "Searching for certificates in '${certLocation}'..." "DEBUG"
+
+        # Find files with PEM, CER, CRT extensions
+        find "${certLocation}" -type f \( -iname "*.pem" -o -iname "*.cer" -o -iname "*.crt" \) | while read -r certFile; do
+
+            # Set flag to true if any certs are found
+            certsFound=true
+
+            # Get certificate base name and destination name
+            certBaseName=$(basename "${certFile}")
+
+            # Get certificate extension
+            certExt="${certBaseName##*.}"
+
+            # Set destination name with CRT extension
+            certDestName="${certBaseName%.*}.crt"
+
+            # Set destination path
+            certDestPath="/usr/local/share/ca-certificates/${certDestName}"
+
+            logMessage "Copying certificate '${certFile}' to '${certDestPath}'..." "DEBUG"
+
+            # Copy certificate to destination
+            if sudo cp "${certFile}" "${certDestPath}"; then
+
+                logMessage "Certificate '${certFile}' copied successfully." "DEBUG"
+
+            else
+
+                logMessage "Failed to copy certificate '${certFile}'." "ERROR"
+
+            fi
+
+        done
+
+    else
+
+        logMessage "Certificate location '${certLocation}' does not exist. Skipping." "DEBUG"
+
+    fi
+
+done
+
+# Update CA certificates if any certs were found
+if [[ "${certsFound}" == true ]]; then
+
+    logMessage "Updating CA certificates..." "INFO"
+
+    # Update the CA certificates
+    if sudo update-ca-certificates; then
+
+        logMessage "CA certificates updated successfully." "DEBUG"
+
+    else
+
+        logMessage "Failed to update CA certificates." "ERROR"
+
+    fi
+
+else
+
+    logMessage "No certificates found in specified locations. Skipping CA update." "DEBUG"
+
+fi
+
+# endregion
+
+# =========================
 # === GIT REPOS TO SSH ====
 # =========================
 # region
