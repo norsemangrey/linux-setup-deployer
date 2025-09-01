@@ -133,13 +133,13 @@ else
 fi
 
 # Check if SSH service is already running
-if ! systemctl is-active --quiet sshd; then
+if ! systemctl is-active --quiet ; then
 
     logMessage "Starting and enabling SSH service..." "INFO"
 
     # Start and enable the SSH service
-    sudo systemctl start sshd
-    sudo systemctl enable sshd
+    sudo systemctl start ssh
+    sudo systemctl enable ssh
 
 else
 
