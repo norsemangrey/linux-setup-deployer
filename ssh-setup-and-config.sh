@@ -133,13 +133,13 @@ else
 fi
 
 # Check if SSH service is already running
-if ! systemctl is-active --quiet ssh; then
+if ! systemctl is-active --quiet sshd; then
 
     logMessage "Starting and enabling SSH service..." "INFO"
 
     # Start and enable the SSH service
-    sudo systemctl start ssh
-    sudo systemctl enable ssh
+    sudo systemctl start sshd
+    sudo systemctl enable sshd
 
 else
 
@@ -234,7 +234,7 @@ else
     logMessage "Checking for existing GPG keys..." "INFO"
 
     # Check for existing GPG keys
-    existingGpgKeys=$(gpg --list-secret-keys --keyid-format LONG | grep 'sec')
+    existingGpgKeys=$(gpg --list-secret-keys --keyid-format LONG)
 
     # Check if any existing GPG keys were found
     if [[ -n "${existingGpgKeys}" ]]; then
