@@ -162,9 +162,22 @@ alternativeInstallationActions() {
             return 0
             ;;
 
+        "git-credential-manager")
+
+            # Get the latest Git Credential Manager release download URL
+            downloadUrl=$(curl -s https://api.github.com/repos/git-ecosystem/git-credential-manager/releases/latest | grep "browser_download_url" | grep ".deb" | cut -d '"' -f 4)
+
+            # Download Git Credential Manager
+            sudo wget "${downloadUrl}" -O ~/downloads/gcm-linux.deb
+
+            # Install Git Credential Manager
+            sudo dpkg -i ~/downloads/gcm-linux.deb
+
+            return 0
+            ;;
+
         *)
             return 1
-
             ;;
 
     esac
@@ -234,6 +247,14 @@ postInstallationActions() {
             sudo chmod +x /usr/local/bin/oh-my-posh
 
             ;;
+
+        "git-credential-manager")
+
+            # Remove downloaded package
+            rm -f ~/downloads/gcm-linux.deb
+
+            # Configure Git Credential Manager
+            git-credential-manager configure
 
         *)
 
@@ -415,6 +436,7 @@ declare -a packages=(
     "bat"
     "avahi-daemon"
     "python3-libtmux"
+    "git-credential-manager"
 )
 
 # Create local bin folder if it does not exist
@@ -467,9 +489,6 @@ certificateLocations=(
 
 logMessage "Checking for certificates in specified locations..." "INFO"
 
-# Initialize flag to track if any certificates were found
-certsFound=false
-
 # Loop through each certificate location
 for certLocation in "${certificateLocations[@]}"; do
 
@@ -480,9 +499,6 @@ for certLocation in "${certificateLocations[@]}"; do
 
         # Find files with PEM, CER, CRT extensions
         find "${certLocation}" -type f \( -iname "*.pem" -o -iname "*.cer" -o -iname "*.crt" \) | while read -r certFile; do
-
-            # Set flag to true if any certs are found
-            certsFound=true
 
             # Get certificate base name and destination name
             certBaseName=$(basename "${certFile}")
@@ -519,8 +535,9 @@ for certLocation in "${certificateLocations[@]}"; do
 
 done
 
+
 # Update CA certificates if any certs were found
-if [[ "${certsFound}" == true ]]; then
+if find "$certLocation" -type f -iname "*.crt" | grep -q .; then
 
     logMessage "Updating CA certificates..." "INFO"
 
