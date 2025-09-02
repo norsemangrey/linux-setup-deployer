@@ -103,6 +103,9 @@ fi
 personalReposPath="${HOME}/workspace/personal/repos"
 personalGithubUser="norsemangrey"
 
+export DOWNLOADS="${HOME}/downloads"
+mkdir -p "${DOWNLOADS}"
+
 # endregion
 
 # =========================
@@ -168,10 +171,10 @@ alternativeInstallationActions() {
             downloadUrl=$(curl -s https://api.github.com/repos/git-ecosystem/git-credential-manager/releases/latest | grep "browser_download_url" | grep ".deb" | cut -d '"' -f 4)
 
             # Download Git Credential Manager
-            sudo wget "${downloadUrl}" -O ~/downloads/gcm-linux.deb
+            sudo wget "${downloadUrl}" -O ${DOWNLOADS}/gcm-linux.deb
 
             # Install Git Credential Manager
-            sudo dpkg -i ~/downloads/gcm-linux.deb
+            sudo dpkg -i ${DOWNLOADS}/gcm-linux.deb
 
             return 0
             ;;
@@ -251,7 +254,7 @@ postInstallationActions() {
         "git-credential-manager")
 
             # Remove downloaded package
-            rm -f ~/downloads/gcm-linux.deb
+            rm -f ${DOWNLOADS}/gcm-linux.deb
 
             # Configure Git Credential Manager
             git-credential-manager configure
