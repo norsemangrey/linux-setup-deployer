@@ -256,6 +256,8 @@ postInstallationActions() {
             # Configure Git Credential Manager
             git-credential-manager configure
 
+            ;;
+
         *)
 
             logMessage "No post-installation actions for package '${packageName}'." "DEBUG"
