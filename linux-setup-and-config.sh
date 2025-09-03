@@ -179,6 +179,23 @@ alternativeInstallationActions() {
             return 0
             ;;
 
+        "lazygit")
+
+            # Download the latest Lazygit release
+            downloadUrl=$(curl -s https://api.github.com/repos/jesseduffield/lazygit/releases/latest | grep "browser_download_url" | grep "linux_x86_64.tar.gz" | cut -d '"' -f 4)
+
+            # Download and extract Lazygit
+            wget "${downloadUrl}" -O ${DOWNLOADS}/lazygit.tar.gz
+
+            # Extract Lazygit
+            tar -xzf ${DOWNLOADS}/lazygit.tar.gz lazygit
+
+            # Install Lazygit
+            sudo install lazygit -D -t /usr/local/bin/
+
+            return 0
+            ;;
+
         *)
             return 1
             ;;
@@ -257,7 +274,7 @@ postInstallationActions() {
             rm -f ${DOWNLOADS}/gcm-linux.deb
 
             # Configure Git Credential Manager
-            git-credential-manager configure
+            #git-credential-manager configure
 
             ;;
 
