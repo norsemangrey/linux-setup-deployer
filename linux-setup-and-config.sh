@@ -459,6 +459,7 @@ declare -a packages=(
     "avahi-daemon"
     "python3-libtmux"
     "git-credential-manager"
+    "lazygit"
 )
 
 # Create local bin folder if it does not exist
