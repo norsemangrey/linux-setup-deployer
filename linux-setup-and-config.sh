@@ -491,6 +491,7 @@ cloneAndRunExternalScript "${personalGithubUser}" ".dotfiles" "deploy-config-lin
 certificateLocations=(
     "${HOME}/cloud/work/setup/certificates"
 )
+certificateDestination="/usr/local/share/ca-certificates"
 
 logMessage "Checking for certificates in specified locations..." "INFO"
 
@@ -515,7 +516,7 @@ for certLocation in "${certificateLocations[@]}"; do
             certDestName="${certBaseName%.*}.crt"
 
             # Set destination path
-            certDestPath="/usr/local/share/ca-certificates/${certDestName}"
+            certDestPath="${certificateDestination}/${certDestName}"
 
             logMessage "Copying certificate '${certFile}' to '${certDestPath}'..." "DEBUG"
 
@@ -542,7 +543,7 @@ done
 
 
 # Update CA certificates if any certs were found
-if find "$certLocation" -type f -iname "*.crt" | grep -q .; then
+if find "${certificateDestination}" -type f -iname "*.crt" | grep -q .; then
 
     logMessage "Updating CA certificates..." "INFO"
 
