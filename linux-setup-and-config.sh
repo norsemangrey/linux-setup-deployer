@@ -188,10 +188,10 @@ alternativeInstallationActions() {
             wget "${downloadUrl}" -O ${DOWNLOADS}/lazygit.tar.gz
 
             # Extract Lazygit
-            tar -xzf ${DOWNLOADS}/lazygit.tar.gz lazygit
+            tar -xzf ${DOWNLOADS}/lazygit.tar.gz -C ${DOWNLOADS}
 
             # Install Lazygit
-            sudo install lazygit -D -t /usr/local/bin/
+            sudo install ${DOWNLOADS}/lazygit -D -t /usr/local/bin/
 
             return 0
             ;;
@@ -619,7 +619,7 @@ convertRepoToSSH() {
 }
 
 # Set all personal repositories to use SSH
-convertRepoToSSH "${personalReposPath}" "${personalGithubUser}"
+#convertRepoToSSH "${personalReposPath}" "${personalGithubUser}"
 
 # endregion
 
