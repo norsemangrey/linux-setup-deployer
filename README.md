@@ -104,4 +104,5 @@ This script:
 
 For additional help or troubleshooting, open an issue in the repository or consult the script usage instructions with the `-h` flag.
 
-# Test
+# Test 1
+## Test 2
