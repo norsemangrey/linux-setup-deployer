@@ -6,6 +6,7 @@ usage() {
     echo "Usage: $0 [OPTIONS]"
     echo ""
     echo "Options:"
+    echo "  -c, --config FILE       Use configuration file to provide input variables."
     echo "  -d, --debug             Enable debug output messages for detailed logging."
     echo "  -v, --verbose           Show standard output from commands (suppress by default)."
     echo "  -h, --help              Show this help message and exit."
@@ -14,11 +15,20 @@ usage() {
     echo "It installs OpenSSH, starts the SSH service, configures firewall rules, and secures the SSH server by"
     echo "disabling root login and password authentication. Additionally, it guides the user to add client keys."
     echo ""
+    echo "Configuration file format:"
+    echo "  The configuration file is a bash script that will be sourced."
+    echo "  Use standard bash variable assignment syntax: variable=\"value\""
+    echo "  Lines starting with # are treated as comments and ignored."
+    echo ""
 }
 
 # Parsed from command line arguments.
 while [[ $# -gt 0 ]]; do
     case "$1" in
+        -c|--config)
+            configFile="$2"
+            shift 2
+            ;;
         -d|--debug)
             debug=true
             shift
@@ -79,6 +89,33 @@ if [[ $(type -t logMessage) != function ]]; then
         echo "[${level}] $1"
 
     }
+
+fi
+
+# CONFIG FILE SOURCING
+
+# Set default config file if none specified
+: "${configFile:=$(dirname "${BASH_SOURCE[0]}")/setup.conf}"
+
+# Source configuration file if it exists and is readable
+if [[ -r "$configFile" ]]; then
+
+    logMessage "Sourcing configuration from '$configFile'..." "INFO"
+
+    # Source the configuration file
+    if source "$configFile"; then
+
+        logMessage "Configuration file loaded successfully." "DEBUG"
+
+    else
+
+        logMessage "Failed to source configuration file. Continuing with interactive prompts..." "WARNING"
+
+    fi
+
+else
+
+    logMessage "No readable configuration file found. Continuing with interactive prompts..." "INFO"
 
 fi
 
@@ -261,9 +298,39 @@ else
 
         logMessage "Generating a new GPG key..." "INFO"
 
-        # Generate GPG key (semi-automated)
-        gpg --batch --pinentry-mode=ask --generate-key gpg_batch.txt
-        #gpg --full-generate-key
+        # Prompt for GPG details if not provided in config
+        [[ -n "$gpgNameReal" ]] || read -p "Enter your real name for the GPG key: " 2>&1 gpgNameReal
+        [[ -n "$gpgNameEmail" ]] || read -p "Enter your email address for the GPG key: " 2>&1 gpgNameEmail
+
+        # Set default GPG configuration values if not provided
+        [[ -n "$gpgKeyType" ]] || gpgKeyType="RSA"
+        [[ -n "$gpgKeyLength" ]] || gpgKeyLength="4096"
+        [[ -n "$gpgExpireDate" ]] || gpgExpireDate="0"
+
+        # Create temporary GPG batch file
+        tempBatchFile=$(mktemp)
+        cat > "$tempBatchFile" <<EOF
+Key-Type: ${gpgKeyType}
+Key-Length: ${gpgKeyLength}
+Name-Real: ${gpgNameReal}
+Name-Email: ${gpgNameEmail}
+Expire-Date: ${gpgExpireDate}
+%commit
+EOF
+
+        # Generate GPG key using temporary batch file
+        if gpg --batch --pinentry-mode=ask --generate-key "$tempBatchFile"; then
+
+            logMessage "GPG key generated successfully." "DEBUG"
+
+        else
+
+            logMessage "Failed to generate GPG key." "ERROR"
+
+        fi
+
+        # Clean up temporary file
+        rm -f "$tempBatchFile"
 
     fi
 
@@ -423,7 +490,7 @@ sshConfigUpdate() {
 sshConfigUpdate "PermitRootLogin" "no"
 sshConfigUpdate "PasswordAuthentication" "no"
 sshConfigUpdate "ChallengeResponseAuthentication" "no"
-sshConfigUpdate "UsePAM" "no"
+sshConfigUpdate "UsePAM" "yes"
 
 # If config was updated, restart SSH and keep the backup
 if [ "${configUpdated}" = true ]; then
