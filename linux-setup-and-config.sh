@@ -683,3 +683,33 @@ fi
 # endregion
 
 logMessage "Setup and config script completed."
+
+# =========================
+# === REBOOT PROMPT =======
+# =========================
+# region
+
+logMessage "System setup is complete. A reboot is recommended to ensure all changes take effect." "INFO"
+
+# Prompt user for reboot
+read -p "Would you like to reboot the system now? (y/N): " $rebootChoice 2>&1
+echo
+
+# Check user choice and reboot if confirmed
+if [[ $rebootChoice =~ ^[Yy]$ ]]; then
+
+    logMessage "Rebooting the system..." "INFO"
+
+    # Give user a moment to see the message
+    sleep 2
+
+    # Reboot the system
+    sudo reboot
+
+else
+
+    logMessage "Reboot skipped. Please remember to reboot manually when convenient to ensure all changes take effect." "WARNING"
+
+fi
+
+# endregion
