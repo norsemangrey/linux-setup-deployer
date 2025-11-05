@@ -1,0 +1,116 @@
+#!/bin/bash
+# Cloud Client Setup Configuration File
+#
+# This is an example configuration file for cloud-client-setup.sh
+# Copy this file and modify the values according to your setup
+# Usage: ./cloud-client-setup.sh --config your-config.conf
+# Usage: ./ssh-setup-and-config.sh --config your-config.conf
+#
+# This file is sourced by the main script, so use proper bash syntax
+# Lines starting with # are comments and will be ignored
+
+# ===================================
+# PERSONAL CLOUD CONFIGURATION
+# ===================================
+
+# Whether to connect to a personal cloud directory
+# Values: y, Y, yes, n, N, no (case insensitive)
+connectCloud="y"
+
+# Whether to continue if local cloud directory has content
+# Values: y, Y, yes, n, N, no (case insensitive)
+continueWithContent="y"
+
+# Connection method for personal cloud
+# Values: m (mount using WebDav), s (sync using Nextcloud CLI)
+connectMethod="s"
+
+# ===================================
+# CLOUD CONFIGURATION
+# ===================================
+
+# Nextcloud server address (without https://)
+cloudAddress="cloud.example.com"
+
+# Nextcloud username
+cloudUsername="user"
+
+# Nextcloud password (consider security implications)
+#cloudPassword="your-password"
+
+# ===================================
+# SMB SHARE CONFIGURATION
+# ===================================
+
+# Whether to set up an SMB share mount point
+# Values: y, Y, yes, n, N, no (case insensitive)
+connectSmb="y"
+
+# SMB server IP address or hostname
+smbHost="192.168.0.100"
+
+# SMB share name (examples: c$, d$, shared, documents, public)
+smbShare="public"
+
+# Local mount point for the SMB share
+smbMountPoint="/mnt/smb"
+
+# SMB username
+smbUsername="user@kexample.com"
+
+# SMB password (consider security implications)
+#smbPassword="your-smb-password"
+
+# ===================================
+# PATH CONFIGURATION
+# ===================================
+
+# Local cloud directory path (where personal cloud files are stored locally)
+localCloudPath="${HOME}/cloud/personal"
+
+# Local path where SMB cloud files will be accessed/symlinked
+# This creates a local symlink to access the work cloud directory from your home folder
+localFromSmbCloudPath="${HOME}/cloud/remote"
+
+# SMB share cloud directory path (work cloud directory on the remote share)
+# This is a relative path on the SMB share pointing to the work cloud directory
+smbCloudPath="Cloud/remote"
+
+# SMB share path where personal cloud files will be synced
+# This is a relative path on the SMB share where personal cloud files will be copied/synced
+smbFromLocalCloudPath="Cloud/personal"
+
+# ===================================
+# GPG CONFIGURATION
+# ===================================
+
+# GPG key type (RSA, DSA, ECDSA, etc.)
+gpgKeyType="RSA"
+
+# GPG key length in bits
+gpgKeyLength="4096"
+
+# Real name for GPG key
+gpgNameReal="User"
+
+# Email address for GPG key
+gpgNameEmail="user@example.com"
+
+# GPG key expiration (0 = never expires)
+gpgExpireDate="0"
+
+# ===================================
+# SECURITY NOTES
+# ===================================
+#
+# WARNING: This configuration file contains sensitive information including passwords.
+# Ensure proper file permissions are set:
+#   chmod 600 your-config.conf
+#
+# Consider using environment variables or a secure credential store for passwords
+# in production environments.
+#
+# Since this file is sourced, you can also use:
+# - Environment variable expansion: cloudUsername="${USER}"
+# - Command substitution: smbHost="$(hostname -I | awk '{print $1}')"
+# - Conditional logic: [[ -f ~/.secret ]] && source ~/.secret
