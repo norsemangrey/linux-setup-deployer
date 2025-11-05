@@ -170,7 +170,7 @@ else
 fi
 
 # Check if SSH service is already running
-if ! systemctl is-active --quiet ; then
+if ! systemctl is-active --quiet ssh; then
 
     logMessage "Starting and enabling SSH service..." "INFO"
 
