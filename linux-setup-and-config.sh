@@ -689,7 +689,7 @@ logMessage "Setup and config script completed."
 logMessage "System setup is complete. A reboot is recommended to ensure all changes take effect." "INFO"
 
 # Prompt user for reboot
-read -p "Would you like to reboot the system now? (y/N): " $rebootChoice 2>&1
+read -p "Would you like to reboot the system now? (y/N): " rebootChoice 2>&1
 echo
 
 # Check user choice and reboot if confirmed
