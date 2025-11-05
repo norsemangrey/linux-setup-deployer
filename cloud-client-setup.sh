@@ -303,7 +303,7 @@ if [[ "$connectPersonalCloud" == "true" && (-z "$connectMethod" || "$connectMeth
             logMessage "Cloud directory successfully synced with local folder." "DEBUG"
 
             # Ensure the sync script is executable
-            chmod +x "${localCloudPath}"/nextcloud-sync.sh
+            find "${localCloudPath}" -type f -name "nextcloud-sync.sh" -exec chmod +x {} \;
 
             # Save cloud password securely for reuse if 'pass' is installed
             if command -v pass &> /dev/null; then
