@@ -234,7 +234,8 @@ else
     logMessage "Installing Keychain Key Manager..." "INFO"
 
     # Install Keychain Key Manager
-    run sudo apt-get update && run sudo apt-get install -y keychain
+    run sudo apt-get update
+    run sudo apt-get install -y keychain
 
 fi
 
@@ -248,7 +249,8 @@ else
     logMessage "Installing Pass Password Manager..." "INFO"
 
     # Install Pass - The Standard Unix Password Manager
-    run sudo apt-get update && run sudo apt-get install -y pass
+    run sudo apt-get update
+    run sudo apt-get install -y pass
 
 fi
 
