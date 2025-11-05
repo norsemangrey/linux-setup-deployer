@@ -302,6 +302,22 @@ if [[ "$connectPersonalCloud" == "true" && (-z "$connectMethod" || "$connectMeth
 
             logMessage "Cloud directory successfully synced with local folder." "DEBUG"
 
+            # Save cloud password securely for reuse if 'pass' is installed
+            if command -v pass &> /dev/null; then
+
+                logMessage "Saving cloud password securely using 'pass'..." "INFO"
+
+                # Insert or update the password in the pass store
+                echo "${cloudPassword}" | pass insert -e nextcloud/"${cloudUsername}"
+
+                logMessage "Cloud password saved to pass store under 'nextcloud/${cloudUsername}'." "DEBUG"
+
+            else
+
+                logMessage "The 'pass' application is not installed. Skipping secure password storage." "WARNING"
+
+            fi
+
             # ===================================
             # === ENABLE NEXTCLOUD SYNC SERVICE =
             # ===================================
