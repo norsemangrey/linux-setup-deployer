@@ -663,9 +663,6 @@ if command -v zsh &> /dev/null && [[ -f "$HOME/.zshenv" ]]; then
         # Set ZSH as the default shell
         chsh -s "$(which zsh)" 2>&1
 
-        # Activate ZSH
-        zsh
-
         logMessage "ZSH is now the default shell. Please log out and log back in for changes to take effect." "INFO"
 
     else
@@ -709,6 +706,12 @@ if [[ $rebootChoice =~ ^[Yy]$ ]]; then
 else
 
     logMessage "Reboot skipped. Please remember to reboot manually when convenient to ensure all changes take effect." "WARNING"
+
+    # Return to home directory
+    cd ~
+
+    # Activate ZSH
+    zsh
 
 fi
 
