@@ -307,46 +307,70 @@ if [[ "$connectPersonalCloud" == "true" && (-z "$connectMethod" || "$connectMeth
             # ===================================
             # region
 
-            logMessage "Checking for Nextcloud Sync service files..." "INFO"
+            # logMessage "Checking for Nextcloud Sync service files..." "INFO"
 
-            # Define service file paths
-            serviceFiles="${HOME}/.config/systemd/user/nextcloud-sync"
+            # # Define service file paths
+            # sourceServicePath="${localCloudPath}/nextcloud"
+            # targetServicePath="${HOME}/.config/systemd/user"
+            # serviceBaseName="nextcloud-sync"
 
-            # Check if all required service files exist
-            if [[ -f "${serviceFiles}.service" && -f "${serviceFiles}.timer" && -f "${serviceFiles}.sh" ]]; then
+            # # Check if all required service files exist
+            # if [[ -f "${sourceServicePath}.service" && -f "${sourceServicePath}.timer" && -f "${sourceServicePath}.sh" ]]; then
 
-                logMessage "Found Nextcloud Sync service files. Setting up systemd service..." "INFO"
+            #     logMessage "Found Nextcloud Sync service files in cloud directory. Creating symlinks..." "INFO"
 
-                # Make the script executable
-                chmod +x "${serviceFiles}.sh"
+            #     # Create target directory if it doesn't exist
+            #     mkdir -p "${targetServicePath}"
 
-                # Reload systemd user daemon to recognize new service files
-                if systemctl --user daemon-reload; then
+            #     # Create symlinks for each service file
+            #     for extension in service timer sh; do
 
-                    logMessage "Systemd user daemon reloaded successfully." "DEBUG"
+            #         sourceFile="${sourceServicePath}/${serviceBaseName}.${extension}"
+            #         targetFile="${targetServicePath}/${serviceBaseName}.${extension}"
 
-                    # Enable and start the timer
-                    if systemctl --user enable nextcloud-sync.timer; then
+            #         # Remove existing file/symlink if it exists
+            #         if [[ -e "${targetFile}" || -L "${targetFile}" ]]; then
+            #             rm "${targetFile}"
+            #         fi
 
-                        logMessage "Nextcloud sync timer enabled successfully." "DEBUG"
+            #         # Create the symlink
+            #         if ln -s "${sourceFile}" "${targetFile}"; then
+            #             logMessage "Created symlink: ${targetFile} -> ${sourceFile}" "DEBUG"
+            #         else
+            #             logMessage "Failed to create symlink for ${serviceBaseName}.${extension}" "WARNING"
+            #         fi
+            #     done
 
-                    else
+            #     # Make the script executable
+            #     chmod +x "${serviceFiles}.sh"
 
-                        logMessage "Failed to enable Nextcloud Sync timer." "WARNING"
+            #     # Reload systemd user daemon to recognize new service files
+            #     if systemctl --user daemon-reload; then
 
-                    fi
+            #         logMessage "Systemd user daemon reloaded successfully." "DEBUG"
 
-                else
+            #         # Enable and start the timer
+            #         if systemctl --user enable nextcloud-sync.timer; then
 
-                    logMessage "Failed to reload systemd user daemon." "WARNING"
+            #             logMessage "Nextcloud sync timer enabled successfully." "DEBUG"
 
-                fi
+            #         else
 
-            else
+            #             logMessage "Failed to enable Nextcloud Sync timer." "WARNING"
 
-                logMessage "Nextcloud Sync service files not found in '${HOME}/.config/systemd/user/'. Skipping service setup." "WARNING"
+            #         fi
 
-            fi
+            #     else
+
+            #         logMessage "Failed to reload systemd user daemon." "WARNING"
+
+            #     fi
+
+            # else
+
+            #     logMessage "Nextcloud Sync service files not found in '${HOME}/.config/systemd/user/'. Skipping service setup." "WARNING"
+
+            # fi
 
             # endregion
 
