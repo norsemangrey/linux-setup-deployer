@@ -302,6 +302,54 @@ if [[ "$connectPersonalCloud" == "true" && (-z "$connectMethod" || "$connectMeth
 
             logMessage "Cloud directory successfully synced with local folder." "DEBUG"
 
+            # ===================================
+            # === ENABLE NEXTCLOUD SYNC SERVICE =
+            # ===================================
+            # region
+
+            logMessage "Checking for Nextcloud Sync service files..." "INFO"
+
+            # Define service file paths
+            serviceFiles="${HOME}/.config/systemd/user/nextcloud-sync"
+
+            # Check if all required service files exist
+            if [[ -f "${serviceFiles}.service" && -f "${serviceFiles}.timer" && -f "${serviceFiles}.sh" ]]; then
+
+                logMessage "Found Nextcloud Sync service files. Setting up systemd service..." "INFO"
+
+                # Make the script executable
+                chmod +x "${serviceFiles}.sh"
+
+                # Reload systemd user daemon to recognize new service files
+                if systemctl --user daemon-reload; then
+
+                    logMessage "Systemd user daemon reloaded successfully." "DEBUG"
+
+                    # Enable and start the timer
+                    if systemctl --user enable nextcloud-sync.timer; then
+
+                        logMessage "Nextcloud sync timer enabled successfully." "DEBUG"
+
+                    else
+
+                        logMessage "Failed to enable Nextcloud Sync timer." "WARNING"
+
+                    fi
+
+                else
+
+                    logMessage "Failed to reload systemd user daemon." "WARNING"
+
+                fi
+
+            else
+
+                logMessage "Nextcloud Sync service files not found in '${HOME}/.config/systemd/user/'. Skipping service setup." "WARNING"
+
+            fi
+
+            # endregion
+
         fi
 
     else
