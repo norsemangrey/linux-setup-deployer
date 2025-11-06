@@ -17,7 +17,7 @@ usage() {
     echo ""
 }
 
-# Parsed from command line arguments
+# Parsed from command line arguments.
 while [[ $# -gt 0 ]]; do
     case "$1" in
         -d|--debug)
