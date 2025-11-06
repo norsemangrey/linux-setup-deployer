@@ -448,6 +448,44 @@ done
 # endregion
 
 # ===================================
+# === DISABLE MOTD MESSAGES =========
+# ===================================
+# region
+
+logMessage "Disabling SSH welcome messages..." "INFO"
+
+# Backup PAM SSH configuration
+pamSshdFile="/etc/pam.d/sshd"
+pamSshdBackup="${pamSshdFile}.bak.${timestamp}"
+
+if [ -f "${pamSshdFile}" ]; then
+
+    sudo cp "${pamSshdFile}" "${pamSshdBackup}"
+
+    # Comment out MOTD lines if they exist and are not already commented
+    if sudo grep -q "^[[:space:]]*session[[:space:]]*optional[[:space:]]*pam_motd\.so.*motd=/run/motd\.dynamic" "${pamSshdFile}"; then
+        sudo sed -i '/^[[:space:]]*session[[:space:]]*optional[[:space:]]*pam_motd\.so.*motd=\/run\/motd\.dynamic/s/^/# /' "${pamSshdFile}"
+        logMessage "Commented out dynamic MOTD line in ${pamSshdFile}" "DEBUG"
+    fi
+
+    if sudo grep -q "^[[:space:]]*session[[:space:]]*optional[[:space:]]*pam_motd\.so.*noupdate" "${pamSshdFile}"; then
+        sudo sed -i '/^[[:space:]]*session[[:space:]]*optional[[:space:]]*pam_motd\.so.*noupdate/s/^/# /' "${pamSshdFile}"
+        logMessage "Commented out noupdate MOTD line in ${pamSshdFile}" "DEBUG"
+    fi
+
+    logMessage "MOTD messages disabled." "INFO"
+
+else
+
+    logMessage "PAM SSH configuration file not found. Skipping MOTD disable." "WARNING"
+
+fi
+
+# endregion
+
+logMessage "SSH enabled and key-based authentication configured for user '${username}'." "INFO"
+
+# ===================================
 # === SSH CONFIGURATION =============
 # ===================================
 # region
@@ -493,6 +531,41 @@ sshConfigUpdate "PermitRootLogin" "no"
 sshConfigUpdate "PasswordAuthentication" "no"
 sshConfigUpdate "ChallengeResponseAuthentication" "no"
 sshConfigUpdate "UsePAM" "yes"
+sshConfigUpdate "PrintMotd" "no"
+sshConfigUpdate "PrintLastLog" "yes"
+
+logMessage "Disabling SSH welcome messages..." "INFO"
+
+# Backup PAM SSH configuration
+sshPamFile="/etc/pam.d/sshd"
+sshPamBackup="${sshPamFile}.bak.${timestamp}"
+
+if [ -f "${sshPamFile}" ]; then
+
+    sudo cp "${sshPamFile}" "${sshPamBackup}"
+
+    # Comment out MOTD lines if they exist and are not already commented
+    if sudo grep -q "^[[:space:]]*session[[:space:]]*optional[[:space:]]*pam_motd\.so.*motd=/run/motd\.dynamic" "${sshPamFile}"; then
+        sudo sed -i '/^[[:space:]]*session[[:space:]]*optional[[:space:]]*pam_motd\.so.*motd=\/run\/motd\.dynamic/s/^/# /' "${sshPamFile}"
+
+        logMessage "Commented out dynamic MOTD line in ${sshPamFile}" "DEBUG"
+
+    fi
+
+    if sudo grep -q "^[[:space:]]*session[[:space:]]*optional[[:space:]]*pam_motd\.so.*noupdate" "${sshPamFile}"; then
+        sudo sed -i '/^[[:space:]]*session[[:space:]]*optional[[:space:]]*pam_motd\.so.*noupdate/s/^/# /' "${sshPamFile}"
+
+        logMessage "Commented out no-update MOTD line in ${sshPamFile}" "DEBUG"
+
+    fi
+
+    logMessage "MOTD messages disabled." "DEBUG"
+
+else
+
+    logMessage "PAM SSH configuration file not found. Skipping MOTD disable." "WARNING"
+
+fi
 
 # If config was updated, restart SSH and keep the backup
 if [ "${configUpdated}" = true ]; then
