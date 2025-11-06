@@ -19,7 +19,7 @@ connectCloud="y"
 
 # Whether to continue if local cloud directory has content
 # Values: y, Y, yes, n, N, no (case insensitive)
-continueWithContent="y"
+continueWithContent="n"
 
 # Connection method for personal cloud
 # Values: m (mount using WebDav), s (sync using Nextcloud CLI)
