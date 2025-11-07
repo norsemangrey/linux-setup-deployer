@@ -526,7 +526,7 @@ runLocalScript "cloud-client-setup"
 # region
 
 # Prompt for personalGithubUser if not set
-[[ -n "${personalGithubUser}" ]] || read -p "Enter your GitHub username (personalGithubUser): " personalGithubUser
+[[ -n "${personalGithubUser}" ]] || read -p "Enter your GitHub username (personalGithubUser): " 2>&1 personalGithubUser
 
 # Exit if still not set
 if [[ -z "${personalGithubUser}" ]]; then
@@ -678,7 +678,7 @@ personalGithubCredentialsStored=false
 # Prompt user to configure GitHub credentials for HTTPS access
 while [[ "${personalGithubCredentialsStored}" != "true" ]]; do
 
-    read -p "Do you want to configure GitHub credentials for HTTPS access? (Y/n): " configureChoice
+    read -p "Do you want to configure GitHub credentials for HTTPS access? (Y/n): " 2>&1 configureChoice
 
     # Set default choice to Y
     configureChoice="${configureChoice:-Y}"
