@@ -135,12 +135,7 @@ if [ $? -ne 0 ]; then
 
 fi
 
-# TODO: Consider moving out of script
-# Personal variables
-personalReposPath="${HOME}/workspace/personal/repos"
-personalGithubUser="norsemangrey"
-personalGithubToken="xxx"
-
+# Create downloads directory for temporary files
 export DOWNLOADS="${HOME}/downloads"
 mkdir -p "${DOWNLOADS}"
 
@@ -529,6 +524,18 @@ runLocalScript "cloud-client-setup"
 # === DOTFILES SETUP ======
 # =========================
 # region
+
+# Prompt for personalGithubUser if not set
+[[ -n "${personalGithubUser}" ]] || read -p "Enter your GitHub username (personalGithubUser): " personalGithubUser
+
+# Exit if still not set
+if [[ -z "${personalGithubUser}" ]]; then
+
+    logMessage "GitHub username is required. Aborting setup..." "ERROR"
+
+    exit 1
+
+fi
 
 # Clone and run the dotfiles setup script
 cloneAndRunExternalScript "${personalGithubUser}" ".dotfiles" "deploy-config-linux.sh"
