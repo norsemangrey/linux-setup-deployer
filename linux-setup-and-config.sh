@@ -6,6 +6,7 @@ usage() {
     echo "Usage: $0 [OPTIONS]"
     echo ""
     echo "Options:"
+    echo "  -c, --config FILE       Use configuration file to provide input variables."
     echo "  -d, --debug             Enable debug output messages for detailed logging."
     echo "  -v, --verbose           Show standard output from commands (suppress by default)."
     echo "  -h, --help              Show this help message and exit."
@@ -15,11 +16,20 @@ usage() {
     echo "Fastfetch, and more. It also executes custom setup scripts and ensures"
     echo "the system is up-to-date."
     echo ""
+    echo "Configuration file format:"
+    echo "  The configuration file is a bash script that will be sourced."
+    echo "  Use standard bash variable assignment syntax: variable=\"value\""
+    echo "  Lines starting with # are treated as comments and ignored."
+    echo ""
 }
 
 # Parsed from command line arguments.
 while [[ $# -gt 0 ]]; do
     case "$1" in
+        -c|--config)
+            configFile="$2"
+            shift 2
+            ;;
         -d|--debug)
             debug=true
             shift
@@ -84,6 +94,33 @@ run() {
 
 }
 
+# CONFIG FILE SOURCING
+
+# Set default config file if none specified
+: "${configFile:=$(dirname "${BASH_SOURCE[0]}")/setup.conf}"
+
+# Source configuration file if it exists and is readable
+if [[ -r "$configFile" ]]; then
+
+    logMessage "Sourcing configuration from '$configFile'..." "INFO"
+
+    # Source the configuration file
+    if source "$configFile"; then
+
+        logMessage "Configuration file loaded successfully." "DEBUG"
+
+    else
+
+        logMessage "Failed to source configuration file. Continuing with interactive prompts..." "WARNING"
+
+    fi
+
+else
+
+    logMessage "No readable configuration file found. Continuing with interactive prompts..." "INFO"
+
+fi
+
 # BUSINESS LOGIC SETUP
 
 # Check if sudo password is valid (not expired)
@@ -102,6 +139,7 @@ fi
 # Personal variables
 personalReposPath="${HOME}/workspace/personal/repos"
 personalGithubUser="norsemangrey"
+personalGithubToken="xxx"
 
 export DOWNLOADS="${HOME}/downloads"
 mkdir -p "${DOWNLOADS}"
@@ -620,6 +658,63 @@ convertRepoToSSH() {
 
 # Set all personal repositories to use SSH
 #convertRepoToSSH "${personalReposPath}" "${personalGithubUser}"
+
+# endregion
+
+# =========================
+# === GITHUB CREDENTIALS ==
+# =========================
+# region
+
+personalGithubCredentialsStored=false
+
+# Prompt user to configure GitHub credentials for HTTPS access
+while [[ "${personalGithubCredentialsStored}" != "true" ]]; do
+
+    read -p "Do you want to configure GitHub credentials for HTTPS access? (Y/n): " configureChoice
+
+    # Set default choice to Y
+    configureChoice="${configureChoice:-Y}"
+
+    # Check user choice
+    if [[ "${configureChoice}" =~ ^[Nn]$ ]]; then
+
+        logMessage "Skipping GitHub credential configuration." "INFO"
+        break
+
+    fi
+
+    # Prompt for cloud credentials if not set in config
+    [[ -n "$personalGithubToken" ]] || read -p "GitHub PAT ('gho_<token>'): " 2>&1 personalGithubToken
+
+    # Check that the GitHub token starts with 'gho_'
+    if [[ "${personalGithubToken}" != gho_* ]]; then
+
+        logMessage "Invalid GitHub token. The token must start with 'gho_'." "ERROR"
+
+        personalGithubToken=""
+
+    else
+
+        # Store GitHub credentials using Git Credential Manager
+        if printf "protocol=https\nhost=github.com\nusername=${personalGithubUser}\npassword=${personalGithubToken}\n" \
+        | git credential approve; then
+
+            logMessage "GitHub credentials stored successfully." "DEBUG"
+
+            personalGithubCredentialsStored=true
+
+        else
+
+            logMessage "Failed to store GitHub credentials." "ERROR"
+
+            personalGithubToken=""
+
+        fi
+
+    fi
+
+done
 
 # endregion
 

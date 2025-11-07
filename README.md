@@ -103,12 +103,3 @@ This script:
 - Modify the scripts as needed for compatibility with non-Ubuntu Debian-based systems.
 
 For additional help or troubleshooting, open an issue in the repository or consult the script usage instructions with the `-h` flag.
-
-# Test 1
-## Test 2
-## Test 3
-## Test 4
-## Test 5
-## Test 6
-## Test 7
-## Test 8
