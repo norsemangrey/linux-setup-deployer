@@ -104,17 +104,14 @@ gpgExpireDate="0"
 # ===================================
 
 # Path to your personal repositories directory (used for local clones)
-# Example: personalReposPath="$HOME/workspace/personal/repos"
-personalReposPath=""
+personalReposPath="$HOME/workspace/personal/repos"
 
 # Your GitHub username (used for cloning and credential setup)
-# Example: personalGithubUser="your-github-username"
-personalGithubUser=""
+personalGithubUser="someuser"
 
 # Your GitHub Personal Access Token (PAT) for HTTPS operations
 # Should start with 'gho_'. Leave blank to be prompted during setup.
-# Example: personalGithubToken="gho_xxxxxxxxxxxxxxxxxxxxx"
-personalGithubToken=""
+#personalGithubToken=""
 
 # ===================================
 # SECURITY NOTES
