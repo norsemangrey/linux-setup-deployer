@@ -525,17 +525,19 @@ runLocalScript "cloud-client-setup"
 # =========================
 # region
 
-# Prompt for personalGithubUser if not set
-[[ -n "${personalGithubUser}" ]] || read -p "Enter your GitHub username (personalGithubUser): " 2>&1 personalGithubUser
+logMessage "Configuring GitHub user and local repo location..." "INFO"
 
-# Exit if still not set
-if [[ -z "${personalGithubUser}" ]]; then
+# Prompt for GitHub credentials for repository access
 
-    logMessage "GitHub username is required. Aborting setup..." "ERROR"
+while [[ -z "$personalGithubUser" || -z "$personalReposPath" ]]; do
 
-    exit 1
+    echo "To authenticate your GitHub account you need to provide the following information:"
 
-fi
+    # Prompt for cloud credentials if not set in config
+    [[ -n "$personalGithubUser" ]] || read -p "GitHub Username: " 2>&1 personalGithubUser
+    [[ -n "$personalReposPath" ]] || read -p "Local Repo Location: " 2>&1 personalReposPath
+
+done
 
 # Clone and run the dotfiles setup script
 cloneAndRunExternalScript "${personalGithubUser}" ".dotfiles" "deploy-config-linux.sh"
@@ -603,7 +605,6 @@ for certLocation in "${certificateLocations[@]}"; do
     fi
 
 done
-
 
 # Update CA certificates if any certs were found
 if find "${certificateDestination}" -type f -iname "*.crt" | grep -q .; then
