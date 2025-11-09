@@ -281,12 +281,18 @@ if [[ "$connectPersonalCloud" == "true" && (-z "$connectMethod" || "$connectMeth
             echo "The following details will be used to sync the cloud directory:"
             echo "URL:      ${url}"
             echo "Username: ${cloudUsername}"
-            echo "Password: ********"
-            read -p "Press 'Enter' to continue or 'R/r' to re-enter the information: " 2>&1 retry
+            read -p "Press 'R/r' to re-enter the information or any key to continue: " 2>&1 retry
 
             # If user hits Enter or types N/n, break the loop
-            if [[ -z "$retry" || "$retry" =~ ^[Nn]$ ]]; then
-                break
+            # if [[ -z "$retry" || "$retry" =~ ^[Nn]$ ]]; then
+            #     break
+            # fi
+
+            # Clear values if user has selected retry
+            if [[ "$retry" =~ ^[Rr]$ ]]; then
+                cloudAddress=""
+                cloudUsername=""
+                cloudPassword=""
             fi
 
         done
@@ -448,12 +454,18 @@ if [[ "$connectPersonalCloud" == "true" && ("$connectMethod" =~ ^[Mm]$) ]]; then
             echo "The following entry will be added to the WebDav client configuration:"
             echo "URL:      ${url}"
             echo "Username: ${cloudUsername}"
-            echo "Password: ********"
-            read -p "Press 'Enter' to continue or 'R/r' to re-enter the information: " 2>&1 retry
+            read -p "Press 'R/r' to re-enter the information or any key to continue: " 2>&1 retry
 
             # If user hits Enter or types N/n, break the loop
-            if [[ -z "$retry" || "$retry" =~ ^[Nn]$ ]]; then
-                break
+            # if [[ -z "$retry" || "$retry" =~ ^[Nn]$ ]]; then
+            #     break
+            # fi
+
+                # Clear values if user has selected retry
+            if [[ "$retry" =~ ^[Rr]$ ]]; then
+                cloudAddress=""
+                cloudUsername=""
+                cloudPassword=""
             fi
 
         done
@@ -603,12 +615,20 @@ if [[ "$connectSmbShare" == "true" ]]; then
         echo "Share:       ${smbShare}"
         echo "Mount point: ${smbMountPoint}"
         echo "Username:    ${smbUsername}"
-        echo "Password:    ********"
-        read -p "Press 'Enter' to continue or 'R/r' to re-enter the information: " 2>&1 retry
+        read -p "Press 'R/r' to re-enter the information or any key to continue: " 2>&1 retry
 
         # If user hits Enter or types N/n, break the loop
-        if [[ -z "$retry" || "$retry" =~ ^[Nn]$ ]]; then
-            break
+        # if [[ -z "$retry" || "$retry" =~ ^[Nn]$ ]]; then
+        #     break
+        # fi
+
+        # Clear values if user has selected retry
+        if [[ "$retry" =~ ^[Rr]$ ]]; then
+            smbHost=""
+            smbShare=""
+            smbMountPoint=""
+            smbUsername=""
+            smbPassword=""
         fi
 
     done
