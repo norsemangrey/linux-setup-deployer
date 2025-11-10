@@ -104,7 +104,7 @@ gpgExpireDate="0"
 # ===================================
 
 # Path to your personal repositories directory (used for local clones)
-personalReposPath="$HOME/workspace/personal/repos"
+personalReposPath="${HOME}/workspace/personal/repos"
 
 # Your GitHub username (used for cloning and credential setup)
 personalGithubUser="someuser"
