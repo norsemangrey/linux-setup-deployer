@@ -704,17 +704,7 @@ while [[ "${personalGithubCredentialsStored}" != "true" ]]; do
 
     else
 
-        echo "$HOME"
-        echo "$USER"
-        echo "$(whoami)"
-        pwd
-        git config --show-scope --get credential.helper
-        echo "${personalGithubUser}"
-        echo "${personalGithubToken}"
-        echo "${GIT_TERMINAL_PROMPT}"
-        echo "${XDG_RUNTIME_DIR}"
-        GIT_TERMINAL_PROMPT=0
-
+        export "$GPG_TTY"
 
         # Store GitHub credentials using Git Credential Manager
         if printf "protocol=https\nhost=github.com\nusername=${personalGithubUser}\npassword=${personalGithubToken}\n" \
