@@ -688,13 +688,13 @@ fi
 # Prompt user to configure GitHub credentials for HTTPS access
 while [[ "${personalGithubCredentialsStored}" != "true" ]]; do
 
-    read -p "Do you want to configure GitHub credentials for HTTPS access? (Y/n): " 2>&1 configureChoice
+    [ -n "$storeGithubCredentials" ] || read -p "Do you want to configure GitHub credentials for HTTPS access? (Y/n): " 2>&1 storeGithubCredentials
 
     # Set default choice to Y
-    configureChoice="${configureChoice:-Y}"
+    storeGithubCredentials="${storeGithubCredentials:-Y}"
 
     # Check user choice
-    if [[ "${configureChoice}" =~ ^[Nn]$ ]]; then
+    if [[ "${storeGithubCredentials}" =~ ^[Nn]$ ]]; then
 
         logMessage "Skipping GitHub credential configuration." "INFO"
         break

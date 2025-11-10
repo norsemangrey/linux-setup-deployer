@@ -43,7 +43,7 @@ cloudUsername="user"
 # ===================================
 
 # Whether to set up an SMB share mount point
-# Values: y, Y, yes, n, N, no (case insensitive)
+# Values: y, Y, n, N (case insensitive)
 connectSmb="y"
 
 # SMB server IP address or hostname
@@ -102,6 +102,10 @@ gpgExpireDate="0"
 # ===================================
 # GITHUB SETTINGS
 # ===================================
+
+# Whether to store GitHub credentials for HTTPS operations
+# Values: y, Y, n, N (case insensitive)
+storeGithubCredentials="y"
 
 # Path to your personal repositories directory (used for local clones)
 personalReposPath="${HOME}/workspace/personal/repos"
