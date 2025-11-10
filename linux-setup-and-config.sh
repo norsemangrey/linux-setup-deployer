@@ -709,6 +709,10 @@ while [[ "${personalGithubCredentialsStored}" != "true" ]]; do
         echo "$(whoami)"
         pwd
         git config --show-scope --get credential.helper
+        echo "${personalGithubUser}"
+        echo "${personalGithubToken}"
+        echo "${GIT_TERMINAL_PROMPT}"
+        echo "${XDG_RUNTIME_DIR}"
         GIT_TERMINAL_PROMPT=0
 
 
