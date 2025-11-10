@@ -300,7 +300,7 @@ if [[ "$connectPersonalCloud" == "true" && (-z "$connectMethod" || "$connectMeth
         logMessage "Executing Nextcloud directory sync command..." "INFO"
 
         # Execute the Nextcloud sync command
-        if ! nextcloudcmd --silent --user "${cloudUsername}" --password "${cloudPassword}" --path / "${localCloudPath}" "${url}" 2>&1; then
+        if ! (umask 077 && nextcloudcmd --silent --user "${cloudUsername}" --password "${cloudPassword}" --path / "${localCloudPath}" "${url}" 2>&1); then
 
             logMessage "Nextcloud sync failed. Please check credentials, network, or permissions." "WARNING"
 
