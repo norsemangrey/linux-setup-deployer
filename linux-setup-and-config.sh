@@ -704,6 +704,14 @@ while [[ "${personalGithubCredentialsStored}" != "true" ]]; do
 
     else
 
+        echo "$HOME"
+        echo "$USER"
+        echo "$(whoami)"
+        pwd
+        git config --show-scope --get credential.helper
+        GIT_TERMINAL_PROMPT=0
+
+
         # Store GitHub credentials using Git Credential Manager
         if printf "protocol=https\nhost=github.com\nusername=${personalGithubUser}\npassword=${personalGithubToken}\n" \
         | git credential approve; then
