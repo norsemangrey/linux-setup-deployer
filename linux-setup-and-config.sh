@@ -674,7 +674,16 @@ convertRepoToSSH() {
 # =========================
 # region
 
-personalGithubCredentialsStored=false
+# Check if GitHub credentials are already stored
+if ls "$HOME/.password-store" 2>/dev/null | grep -q "git"; then
+
+    personalGithubCredentialsStored=true
+
+else
+
+    personalGithubCredentialsStored=false
+
+fi
 
 # Prompt user to configure GitHub credentials for HTTPS access
 while [[ "${personalGithubCredentialsStored}" != "true" ]]; do
@@ -704,7 +713,8 @@ while [[ "${personalGithubCredentialsStored}" != "true" ]]; do
 
     else
 
-        export "$GPG_TTY"
+        # Configure GPG TTY for Git Credential Manager
+        export GPG_TTY=$(tty)
 
         # Store GitHub credentials using Git Credential Manager
         if printf "protocol=https\nhost=github.com\nusername=${personalGithubUser}\npassword=${personalGithubToken}\n" \
