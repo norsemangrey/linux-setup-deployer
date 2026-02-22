@@ -414,6 +414,10 @@ run sudo apt-get autoremove -y
 # =========================
 # region
 
+# Force a safe locale while configuring locales
+export LC_ALL=C
+export LANG=C
+
 # Ensure required locales are available
 
 # Required locales
@@ -429,7 +433,7 @@ for locale in "${locales[@]}"; do
     localeCheck="${locale}.utf8"
 
     # Check if locale is available
-    if ! locale -a | grep -q "${localeCheck}"; then
+    if ! locale -a | grep -qi "^${localeCheck}$"; then
 
         # Add missing locale to array
         missingLocales+=("${locale}")
@@ -452,11 +456,14 @@ if [ ${#missingLocales[@]} -ne 0 ]; then
         # Append UTF string to locale
         localeNew="${locale}.UTF-8"
 
-        # Add locale to locale.gen file
-        sudo sed -i "/${localeNew}/s/^#//" /etc/locale.gen
+        # Add locale to locale.gen file ()uncomment if present, otherwise append)
+        if grep -q "^# ${localeNew}" /etc/locale.gen; then
+            sudo sed -i "s/^# ${localeNew}/${localeNew}/" /etc/locale.gen
+        elif ! grep -q "^${localeNew}" /etc/locale.gen; then
+            echo "${localeNew}" | sudo tee -a /etc/locale.gen >/dev/null
+        fi
 
     done
-
 
     logMessage "Generating missing locales..." "INFO"
 
@@ -468,6 +475,13 @@ else
     logMessage "All required locales are already available." "DEBUG"
 
 fi
+
+# Restore preferred default locale AFTER generation
+sudo update-locale LANG=nb_NO.UTF-8 LC_ALL=nb_NO.UTF-8
+
+# Unset temporary overrides
+unset LC_ALL
+unset LANG
 
 #endregion
 
