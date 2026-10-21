@@ -1,10 +1,12 @@
 #!/bin/bash
-# Cloud Client Setup Configuration File
+# Linux Setup Configuration File
 #
-# This is an example configuration file for cloud-client-setup.sh
-# Copy this file and modify the values according to your setup
-# Usage: ./cloud-client-setup.sh --config your-config.conf
-# Usage: ./ssh-setup-and-config.sh --config your-config.conf
+# This is an example configuration file for the setup scripts
+# (linux-setup-and-config.sh, ssh-setup-and-config.sh, gpg-pass-setup.sh and cloud-client-setup.sh).
+# Copy this file to 'setup.conf' (used by default) and modify the values according to your setup
+# Usage: ./linux-setup-and-config.sh --config your-config.conf
+#
+# Everything is optional. Values left out are asked for interactively (or use the defaults below).
 #
 # This file is sourced by the main script, so use proper bash syntax
 # Lines starting with # are comments and will be ignored
@@ -147,7 +149,7 @@ personalReposPath="${HOME}/workspace/personal/repos"
 personalGithubUser="someuser"
 
 # Your GitHub Personal Access Token (PAT) for HTTPS operations
-# Should start with 'gho_'. Leave blank to be prompted during setup.
+# Must start with 'gho_' (checked by the script). Leave blank to be prompted during setup.
 #personalGithubToken=""
 
 # ===================================

@@ -650,7 +650,7 @@ fi
 
 # Define certificate search locations
 certificateLocations=(
-    "${HOME}/cloud/work/setup/certificates"
+    "${localFromSmbCloudPath:-${HOME}/cloud/work}/setup/certificates"
 )
 certificateDestination="/usr/local/share/ca-certificates"
 
