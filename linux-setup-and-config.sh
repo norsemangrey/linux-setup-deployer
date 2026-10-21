@@ -616,6 +616,11 @@ if isYes "${setupDotfiles}" || isYes "${setupPass}"; then
 
     done
 
+    # Expand a leading '~', '$HOME' or '${HOME}' (typed at the prompt it is not expanded, which would create a relative path)
+    personalReposPath="${personalReposPath/#\~/${HOME}}"
+    personalReposPath="${personalReposPath/#\$HOME/${HOME}}"
+    personalReposPath="${personalReposPath/#\$\{HOME\}/${HOME}}"
+
     # Prepare the workspace path
     mkdir -p "${personalReposPath}"
 
