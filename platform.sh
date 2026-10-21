@@ -49,10 +49,16 @@ detectPlatform() {
 
 }
 
-# Detect the environment (a graphical default target means a desktop install)
+# Detect the environment (desktop = graphical target AND an installed display manager or desktop session)
 detectEnvironment() {
 
-    if [[ "$(timeout 5 systemctl get-default 2>/dev/null)" == "graphical.target" ]]; then
+    # Ubuntu Server also defaults to graphical.target, so the target alone is not enough
+    if [[ "$(timeout 5 systemctl get-default 2>/dev/null)" != "graphical.target" ]]; then
+
+        echo "headless"
+
+    elif [[ -n "$(ls -A /usr/share/xsessions /usr/share/wayland-sessions 2>/dev/null)" ]] \
+        || [[ -e /etc/systemd/system/display-manager.service ]]; then
 
         echo "desktop"
 
