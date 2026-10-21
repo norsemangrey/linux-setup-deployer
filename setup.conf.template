@@ -10,11 +10,45 @@
 # Lines starting with # are comments and will be ignored
 
 # ===================================
+# PLATFORM AND STEPS
+# ===================================
+
+# The platform and environment are detected automatically (see platform.sh).
+# Uncomment to override.
+# platform: wsl | hyperv | other (bare metal or other hypervisor)
+# environment: desktop | headless
+#platform="hyperv"
+#environment="headless"
+
+# Switches to turn steps on or off. Values: yes, no.
+# Leave empty (or 'auto') to use the default for the detected platform/environment.
+#
+#   setupLocale     Generate locales                           (default: yes, no on desktop)
+#   setupSsh        OpenSSH server and key-based login         (default: yes, no on WSL)
+#   setupFirewall   UFW package and SSH firewall rule          (default: yes, no on WSL)
+#   setupAvahi      Avahi / mDNS                               (default: yes, no on WSL and desktop)
+#   setupPass       GPG key, 'pass' and GitHub credentials     (default: yes, no on desktop)
+#   setupDotfiles   Clone and run the dotfiles repository      (default: yes)
+#   setupWork       Work host share, work cloud symlink and    (default: ask on WSL/Hyper-V, no otherwise)
+#                   copy of personal cloud to the host
+#
+# Note: GitHub credentials (storeGithubCredentials below) require 'pass' and a Git credential helper
+# (configured by the dotfiles). They are skipped with a warning if these are not available.
+setupLocale=""
+setupSsh=""
+setupFirewall=""
+setupAvahi=""
+setupPass=""
+setupDotfiles=""
+setupWork=""
+
+# ===================================
 # PERSONAL CLOUD CONFIGURATION
 # ===================================
 
-# Whether to connect to a personal cloud directory
-# Values: y, Y, yes, n, N, no (case insensitive)
+# Whether to connect to a personal cloud directory (sync/mount).
+# Values: y, yes, n, no (case insensitive). Leave empty to be asked (defaults to 'no' on desktop,
+# where the client is configured in the UI and only the local directory below is created).
 connectCloud="y"
 
 # Whether to continue if local cloud directory has content
@@ -42,9 +76,8 @@ cloudUsername="user"
 # SMB SHARE CONFIGURATION
 # ===================================
 
-# Whether to set up an SMB share mount point
-# Values: y, Y, n, N (case insensitive)
-connectSmb="y"
+# The SMB share is mounted when 'setupWork' (above) is enabled on a platform other than WSL.
+# On WSL the Windows drive is already mounted (use '/mnt/c' as the mount point).
 
 # SMB server IP address or hostname
 smbHost="192.168.0.100"

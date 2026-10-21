@@ -119,6 +119,9 @@ else
 
 fi
 
+# PLATFORM DETECTION AND STEP DEFAULTS (see platform.sh)
+source "$(dirname "${BASH_SOURCE[0]}")/platform.sh"
+
 # BUSINESS LOGIC SETUP
 
 # Get the username from environment variable
@@ -191,36 +194,44 @@ fi
 # ===================================
 # region
 
-# Check if UFW is installed and SSH rule exists
-if command -v ufw >/dev/null; then
+if ! isYes "${setupFirewall}"; then
 
-    logMessage "Checking firewall rules..." "DEBUG"
-
-    # Check if SSH firewall rule is already configured
-    if sudo ufw show added | grep -q ' 22/tcp'; then
-
-        logMessage "Firewall rule for SSH already exists." "DEBUG"
-
-    else
-
-        logMessage "Configuring firewall to allow SSH..." "INFO"
-
-        # Set allow rule for SSH on port 22 and reload UFW
-        run sudo ufw allow 22/tcp comment 'SSH'
-        run sudo ufw reload
-
-    fi
+    logMessage "Skipping firewall configuration (setupFirewall='${setupFirewall}')." "INFO"
 
 else
 
-    echo "UFW is not installed. Skipping firewall configuration." "WARNING"
+    # Check if UFW is installed and SSH rule exists
+    if command -v ufw >/dev/null; then
+
+        logMessage "Checking firewall rules..." "DEBUG"
+
+        # Check if SSH firewall rule is already configured
+        if sudo ufw show added | grep -q ' 22/tcp'; then
+
+            logMessage "Firewall rule for SSH already exists." "DEBUG"
+
+        else
+
+            logMessage "Configuring firewall to allow SSH..." "INFO"
+
+            # Set allow rule for SSH on port 22 and reload UFW
+            run sudo ufw allow 22/tcp comment 'SSH'
+            run sudo ufw reload
+
+        fi
+
+    else
+
+        logMessage "UFW is not installed. Skipping firewall configuration." "WARNING"
+
+    fi
 
 fi
 
 # endregion
 
 # ===================================
-# === INSTALL KEYCHAIN & PASS =======
+# === INSTALL KEYCHAIN ==============
 # ===================================
 # region
 
@@ -239,126 +250,6 @@ else
 
 fi
 
-# Check if pass is installed
-if command -v pass &> /dev/null; then
-
-    logMessage "Pass is already installed." "DEBUG"
-
-else
-
-    logMessage "Installing Pass Password Manager..." "INFO"
-
-    # Install Pass - The Standard Unix Password Manager
-    run sudo apt-get update
-    run sudo apt-get install -y pass
-
-fi
-
-# endregion
-
-# ===================================
-# === CREATE KEY & INITIALIZE PASS ==
-# ===================================
-# region
-
-logMessage "Initializing 'Pass' Password Manager..." "INFO"
-
-# Check if Pass is already initialized
-if [[ -f "${HOME}/.password-store/.gpg-id" ]]; then
-
-    logMessage "Pass is already initialized." "DEBUG"
-
-else
-
-    logMessage "Checking for existing GPG keys..." "INFO"
-
-    # Check for existing GPG keys
-    existingGpgKeys=$(gpg --list-secret-keys --keyid-format LONG)
-
-    # Check if any existing GPG keys were found
-    if [[ -n "${existingGpgKeys}" ]]; then
-
-        logMessage "Existing GPG keys found." "DEBUG"
-
-        echo "You already have one or more GPG keys:"
-
-        # List existing GPG keys
-        gpg --list-secret-keys --keyid-format LONG
-
-    fi
-
-    # Prompt the user: Enter to continue (default), Y to add a new entry
-    read -p "Press 'Enter' to add a new GPG key, or type 'N/n' to continue without adding: " 2>&1 confirm
-
-    # If user hits Enter, set confirm to "y"
-    if [[ -z "$confirm" ]]; then
-        confirm="y"
-    fi
-
-    # If user confirmed, generate a new GPG key
-    if [[ "${confirm}" =~ ^[Yy]$ ]]; then
-
-        logMessage "Generating a new GPG key..." "INFO"
-
-        # Prompt for GPG details if not provided in config
-        [[ -n "$gpgNameReal" ]] || read -p "Enter your real name for the GPG key: " 2>&1 gpgNameReal
-        [[ -n "$gpgNameEmail" ]] || read -p "Enter your email address for the GPG key: " 2>&1 gpgNameEmail
-
-        # Set default GPG configuration values if not provided
-        [[ -n "$gpgKeyType" ]] || gpgKeyType="RSA"
-        [[ -n "$gpgKeyLength" ]] || gpgKeyLength="4096"
-        [[ -n "$gpgExpireDate" ]] || gpgExpireDate="0"
-
-        # Create temporary GPG batch file
-        tempBatchFile=$(mktemp)
-        cat > "$tempBatchFile" <<EOF
-Key-Type: ${gpgKeyType}
-Key-Length: ${gpgKeyLength}
-Name-Real: ${gpgNameReal}
-Name-Email: ${gpgNameEmail}
-Expire-Date: ${gpgExpireDate}
-%commit
-EOF
-
-        # Generate GPG key using temporary batch file
-        if gpg --batch --pinentry-mode=ask --generate-key "$tempBatchFile"; then
-
-            logMessage "GPG key generated successfully." "DEBUG"
-
-        else
-
-            logMessage "Failed to generate GPG key." "ERROR"
-
-        fi
-
-        # Clean up temporary file
-        rm -f "$tempBatchFile"
-
-    fi
-
-    logMessage "Fetching the last generated GPG key..." "INFO"
-
-    # Get the last generated key’s fingerprint
-    keyId=$(gpg --list-secret-keys --keyid-format LONG | grep 'sec' | tail -n1 | awk '{print $2}' | cut -d'/' -f2)
-
-    # Check if the key ID is empty
-    if [[ -z "${keyId}" ]]; then
-
-        logMessage "No GPG key found. Cannot initialize password manager." "ERROR"
-
-    else
-
-        logMessage "Found GPG Key ID: ${keyId}" "DEBUG"
-
-        logMessage "Initializing Password Manager with GPG key..." "INFO"
-
-        # Initialize pass with this key
-        pass init "${keyId}"
-
-    fi
-
-fi
-
 # endregion
 
 # ===================================
@@ -368,28 +259,21 @@ fi
 
 logMessage "Setting up SSH key-based authentication for '${username}'..." "INFO"
 
-# Create SSH directory if it doesn't exist and set correct permissions
-if [ ! -d "/home/${username}/.ssh" ]; then
+sshDirectory="${HOME}/.ssh"
 
-    # Create directory and set correct permissions
-    sudo mkdir -p /home/"${username}"/.ssh
-    sudo chmod 700 /home/"${username}"/.ssh
+# Create SSH directory and authorized keys file (as the user, not root) if they do not exist
+mkdir -p "${sshDirectory}"
+touch "${sshDirectory}/authorized_keys"
 
-fi
+# Repair ownership if they were created by root in a previous run
+sudo chown "$(id -u):$(id -g)" "${sshDirectory}" "${sshDirectory}/authorized_keys"
 
-# Create authorized_keys file if it doesn't exist
-if [ ! -f /home/"${username}"/.ssh/authorized_keys ]; then
-
-    echo "Creating the authorized keys file..." "INFO"
-
-    # Create file and set correct permissions
-    sudo touch /home/"${username}"/.ssh/authorized_keys
-    sudo chmod 600 /home/"${username}"/.ssh/authorized_keys
-
-fi
+# Set correct permissions
+chmod 700 "${sshDirectory}"
+chmod 600 "${sshDirectory}/authorized_keys"
 
 # Track the initial line count of the authorized_keys file
-initialKeyCount=$(wc -l < /home/"${username}"/.ssh/authorized_keys 2>/dev/null || echo 0)
+initialKeyCount=$(wc -l < "${sshDirectory}/authorized_keys" 2>/dev/null || echo 0)
 
 # Check if key file contains any pre-existing client entries
 if [ $initialKeyCount -gt 0 ]; then
@@ -428,10 +312,10 @@ while [[ "$copyKey" == true ]]; do
     read -p "Press 'Enter' after copying the public key to continue..." 2>&1
 
     # Get the current line count
-    currentKeyCount=$(wc -l < /home/"${username}"/.ssh/authorized_keys 2>/dev/null || echo 0)
+    currentKeyCount=$(wc -l < "${sshDirectory}/authorized_keys" 2>/dev/null || echo 0)
 
     # Check for new line and validate new key
-    if [ "${currentKeyCount}" -gt "${initialKeyCount}" ] && tail -n 1 /home/"${username}"/.ssh/authorized_keys | grep -q "^ssh-"; then
+    if [ "${currentKeyCount}" -gt "${initialKeyCount}" ] && tail -n 1 "${sshDirectory}/authorized_keys" | grep -q "^ssh-"; then
 
         logMessage "Client public key successfully added." "INFO"
 
@@ -446,44 +330,6 @@ while [[ "$copyKey" == true ]]; do
 done
 
 # endregion
-
-# ===================================
-# === DISABLE MOTD MESSAGES =========
-# ===================================
-# region
-
-logMessage "Disabling SSH welcome messages..." "INFO"
-
-# Backup PAM SSH configuration
-pamSshdFile="/etc/pam.d/sshd"
-pamSshdBackup="${pamSshdFile}.bak.${timestamp}"
-
-if [ -f "${pamSshdFile}" ]; then
-
-    sudo cp "${pamSshdFile}" "${pamSshdBackup}"
-
-    # Comment out MOTD lines if they exist and are not already commented
-    if sudo grep -q "^[[:space:]]*session[[:space:]]*optional[[:space:]]*pam_motd\.so.*motd=/run/motd\.dynamic" "${pamSshdFile}"; then
-        sudo sed -i '/^[[:space:]]*session[[:space:]]*optional[[:space:]]*pam_motd\.so.*motd=\/run\/motd\.dynamic/s/^/# /' "${pamSshdFile}"
-        logMessage "Commented out dynamic MOTD line in ${pamSshdFile}" "DEBUG"
-    fi
-
-    if sudo grep -q "^[[:space:]]*session[[:space:]]*optional[[:space:]]*pam_motd\.so.*noupdate" "${pamSshdFile}"; then
-        sudo sed -i '/^[[:space:]]*session[[:space:]]*optional[[:space:]]*pam_motd\.so.*noupdate/s/^/# /' "${pamSshdFile}"
-        logMessage "Commented out noupdate MOTD line in ${pamSshdFile}" "DEBUG"
-    fi
-
-    logMessage "MOTD messages disabled." "INFO"
-
-else
-
-    logMessage "PAM SSH configuration file not found. Skipping MOTD disable." "WARNING"
-
-fi
-
-# endregion
-
-logMessage "SSH enabled and key-based authentication configured for user '${username}'." "INFO"
 
 # ===================================
 # === SSH CONFIGURATION =============
@@ -523,7 +369,6 @@ sshConfigUpdate() {
 
     fi
 
-    configUpdated=true
 }
 
 # Modify config to disable root login and password authentication
@@ -559,6 +404,13 @@ if [ -f "${sshPamFile}" ]; then
 
     fi
 
+    # Remove the backup if nothing was changed (keeps repeated runs from piling up backups)
+    if sudo cmp -s "${sshPamFile}" "${sshPamBackup}"; then
+
+        sudo rm "${sshPamBackup}"
+
+    fi
+
     logMessage "MOTD messages disabled." "DEBUG"
 
 else
@@ -567,8 +419,8 @@ else
 
 fi
 
-# If config was updated, restart SSH and keep the backup
-if [ "${configUpdated}" = true ]; then
+# If config was changed, restart SSH and keep the backup
+if ! sudo cmp -s "${sshConfigFile}" "${sshConfigBackup}"; then
 
     logMessage "SSH configuration updated. Restarting SSH service..." "INFO"
 

@@ -121,6 +121,11 @@ else
 
 fi
 
+# PLATFORM DETECTION AND STEP DEFAULTS (see platform.sh)
+source "$(dirname "${BASH_SOURCE[0]}")/platform.sh"
+
+logMessage "Platform: '${platform}', environment: '${environment}'." "INFO"
+
 # BUSINESS LOGIC SETUP
 
 # Check if sudo password is valid (not expired)
@@ -146,32 +151,58 @@ mkdir -p "${DOWNLOADS}"
 # =========================
 # region
 
+# Check if a package is installed (tools not installed through apt are checked by command name)
+isInstalled() {
+
+    local packageName="$1"
+
+    case "${packageName}" in
+
+        "oh-my-posh"|"lazygit"|"git-credential-manager")
+
+            command -v "${packageName}" &> /dev/null
+            ;;
+
+        *)
+
+            dpkg -s "${packageName}" &> /dev/null
+            ;;
+
+    esac
+
+}
+
 # Install a package if not already installed
 installPackage() {
 
     local packageName="$1"
 
-    if ! dpkg -s "${packageName}" &> /dev/null; then
+    if ! isInstalled "${packageName}"; then
 
         logMessage "Installing '${packageName}'..." "INFO"
 
         # Perform any pre-installation actions
         preInstallationActions "${packageName}"
 
-        # Check for alternative installation methods
-        if alternativeInstallationActions "${packageName}"; then
+        # Check for alternative installation methods (0 = installed, 1 = none available, other = failed)
+        alternativeInstallationActions "${packageName}"
+        local result=$?
 
-            logMessage "Alternative installation for '${packageName}' completed successfully." "DEBUG"
-
-        else
+        if [[ ${result} -eq 1 ]]; then
 
             # Install the package
             run sudo apt-get install -y "${packageName}"
+            result=$?
 
         fi
 
-        # Perform any post-installation actions
-        postInstallationActions "${packageName}"
+        if [[ ${result} -ne 0 ]]; then
+
+            logMessage "Failed to install '${packageName}'. Continuing..." "ERROR"
+
+            return 0
+
+        fi
 
         logMessage "Successfully installed package '${packageName}'." "DEBUG"
 
@@ -181,50 +212,59 @@ installPackage() {
 
     fi
 
+    # Post-installation actions are safe to repeat and are run every time
+    # to complete a package that was only partially set up during a previous run
+    postInstallationActions "${packageName}"
+
 }
 
 # Perform alternative installation actions
 alternativeInstallationActions() {
 
     local packageName="$1"
+    local downloadUrl
 
     case "${packageName}" in
 
         "oh-my-posh")
 
-            # Download Oh-My-Posh
-            sudo wget https://github.com/JanDeDobbeleer/oh-my-posh/releases/latest/download/posh-linux-amd64 -O /usr/local/bin/oh-my-posh
+            # Download and install Oh-My-Posh
+            wget "https://github.com/JanDeDobbeleer/oh-my-posh/releases/latest/download/posh-linux-${architecture}" -O "${DOWNLOADS}/oh-my-posh" \
+                && sudo install -m 755 "${DOWNLOADS}/oh-my-posh" /usr/local/bin/oh-my-posh || return 2
 
             return 0
             ;;
 
         "git-credential-manager")
 
+            # Release assets are named 'x64' and 'arm64'
+            local gcmArchitecture="${architecture/amd64/x64}"
+
             # Get the latest Git Credential Manager release download URL
-            downloadUrl=$(curl -s https://api.github.com/repos/git-ecosystem/git-credential-manager/releases/latest | grep "browser_download_url" | grep ".deb" | cut -d '"' -f 4)
+            downloadUrl=$(curl -s https://api.github.com/repos/git-ecosystem/git-credential-manager/releases/latest | grep "browser_download_url" | grep "linux-${gcmArchitecture}-[0-9.]*\.deb" | cut -d '"' -f 4)
 
-            # Download Git Credential Manager
-            sudo wget "${downloadUrl}" -O ${DOWNLOADS}/gcm-linux.deb
+            [[ -n "${downloadUrl}" ]] || return 2
 
-            # Install Git Credential Manager
-            sudo dpkg -i ${DOWNLOADS}/gcm-linux.deb
+            # Download and install Git Credential Manager
+            wget "${downloadUrl}" -O "${DOWNLOADS}/gcm-linux.deb" && sudo dpkg -i "${DOWNLOADS}/gcm-linux.deb" || return 2
 
             return 0
             ;;
 
         "lazygit")
 
-            # Download the latest Lazygit release
-            downloadUrl=$(curl -s https://api.github.com/repos/jesseduffield/lazygit/releases/latest | grep "browser_download_url" | grep "linux_x86_64.tar.gz" | cut -d '"' -f 4)
+            # Release assets are named 'x86_64' and 'arm64'
+            local lazygitArchitecture="${architecture/amd64/x86_64}"
 
-            # Download and extract Lazygit
-            wget "${downloadUrl}" -O ${DOWNLOADS}/lazygit.tar.gz
+            # Get the latest Lazygit release download URL
+            downloadUrl=$(curl -s https://api.github.com/repos/jesseduffield/lazygit/releases/latest | grep "browser_download_url" | grep "linux_${lazygitArchitecture}.tar.gz" | cut -d '"' -f 4)
 
-            # Extract Lazygit
-            tar -xzf ${DOWNLOADS}/lazygit.tar.gz -C ${DOWNLOADS}
+            [[ -n "${downloadUrl}" ]] || return 2
 
-            # Install Lazygit
-            sudo install ${DOWNLOADS}/lazygit -D -t /usr/local/bin/
+            # Download, extract and install Lazygit
+            wget "${downloadUrl}" -O "${DOWNLOADS}/lazygit.tar.gz" \
+                && tar -xzf "${DOWNLOADS}/lazygit.tar.gz" -C "${DOWNLOADS}" lazygit \
+                && sudo install "${DOWNLOADS}/lazygit" -D -t /usr/local/bin/ || return 2
 
             return 0
             ;;
@@ -294,13 +334,6 @@ postInstallationActions() {
 
             ;;
 
-        "oh-my-posh")
-
-            # Set execution permission
-            sudo chmod +x /usr/local/bin/oh-my-posh
-
-            ;;
-
         "git-credential-manager")
 
             # Remove downloaded package
@@ -339,8 +372,8 @@ runLocalScript() {
 
         logMessage "Executing setup script '${scriptName}'..." "INFO"
 
-        # Execute installer script
-        "${scriptPath}" ${debug:+-d} ${verbose:+-v}
+        # Execute installer script (passing the config file on)
+        "${scriptPath}" ${configFile:+-c "${configFile}"} ${debug:+-d} ${verbose:+-v}
 
         # Check for errors
         if [[ $? -eq 0 ]]; then
@@ -414,74 +447,82 @@ run sudo apt-get autoremove -y
 # =========================
 # region
 
-# Force a safe locale while configuring locales
-export LC_ALL=C
-export LANG=C
+if ! isYes "${setupLocale}"; then
 
-# Ensure required locales are available
+    logMessage "Skipping locale setup (setupLocale='${setupLocale}')." "INFO"
 
-# Required locales
-locales=("en_US" "nb_NO")
+else
 
-# Check if each locale is available
-missingLocales=()
+    # Force a safe locale while configuring locales
+    export LC_ALL=C
+    export LANG=C
 
-# Check if each locale is available
-for locale in "${locales[@]}"; do
+    # Ensure required locales are available
 
-    # Append UTF string to locale
-    localeCheck="${locale}.utf8"
+    # Required locales
+    locales=("en_US" "nb_NO")
 
-    # Check if locale is available
-    if ! locale -a | grep -qi "^${localeCheck}$"; then
+    # Check if each locale is available
+    missingLocales=()
 
-        # Add missing locale to array
-        missingLocales+=("${locale}")
-
-    fi
-
-done
-
-# Regenerate locales if any are missing
-if [ ${#missingLocales[@]} -ne 0 ]; then
-
-    logMessage "Found missing locales (${missingLocales[*]}). Adding to locale file (/etc/locale.gen)..." "INFO"
-
-    # Backup locale.gen
-    sudo cp /etc/locale.gen /etc/locale.gen.bak
-
-    # Add missing locales to locale file
-    for locale in "${missingLocales[@]}"; do
+    # Check if each locale is available
+    for locale in "${locales[@]}"; do
 
         # Append UTF string to locale
-        localeNew="${locale}.UTF-8"
+        localeCheck="${locale}.utf8"
 
-        # Add locale to locale.gen file ()uncomment if present, otherwise append)
-        if grep -q "^# ${localeNew}" /etc/locale.gen; then
-            sudo sed -i "s/^# ${localeNew}/${localeNew}/" /etc/locale.gen
-        elif ! grep -q "^${localeNew}" /etc/locale.gen; then
-            echo "${localeNew}" | sudo tee -a /etc/locale.gen >/dev/null
+        # Check if locale is available
+        if ! locale -a | grep -qi "^${localeCheck}$"; then
+
+            # Add missing locale to array
+            missingLocales+=("${locale}")
+
         fi
 
     done
 
-    logMessage "Generating missing locales..." "INFO"
+    # Regenerate locales if any are missing
+    if [ ${#missingLocales[@]} -ne 0 ]; then
 
-    # Regenerate locales
-    run sudo locale-gen
+        logMessage "Found missing locales (${missingLocales[*]}). Adding to locale file (/etc/locale.gen)..." "INFO"
 
-else
+        # Backup locale.gen
+        sudo cp /etc/locale.gen /etc/locale.gen.bak
 
-    logMessage "All required locales are already available." "DEBUG"
+        # Add missing locales to locale file
+        for locale in "${missingLocales[@]}"; do
+
+            # Append UTF string to locale
+            localeNew="${locale}.UTF-8"
+
+            # Add locale to locale.gen file ()uncomment if present, otherwise append)
+            if grep -q "^# ${localeNew}" /etc/locale.gen; then
+                sudo sed -i "s/^# ${localeNew}/${localeNew}/" /etc/locale.gen
+            elif ! grep -q "^${localeNew}" /etc/locale.gen; then
+                echo "${localeNew}" | sudo tee -a /etc/locale.gen >/dev/null
+            fi
+
+        done
+
+        logMessage "Generating missing locales..." "INFO"
+
+        # Regenerate locales
+        run sudo locale-gen
+
+    else
+
+        logMessage "All required locales are already available." "DEBUG"
+
+    fi
+
+    # Restore preferred default locale AFTER generation
+    sudo update-locale LANG=nb_NO.UTF-8 LC_ALL=nb_NO.UTF-8
+
+    # Unset temporary overrides
+    unset LC_ALL
+    unset LANG
 
 fi
-
-# Restore preferred default locale AFTER generation
-sudo update-locale LANG=nb_NO.UTF-8 LC_ALL=nb_NO.UTF-8
-
-# Unset temporary overrides
-unset LC_ALL
-unset LANG
 
 #endregion
 
@@ -492,7 +533,6 @@ unset LANG
 
 # Array of packages to install
 declare -a packages=(
-    "ufw"
     "zsh"
     "lsd"
     "tmux"
@@ -503,11 +543,14 @@ declare -a packages=(
     "yq"
     "fd-find"
     "bat"
-    "avahi-daemon"
     "python3-libtmux"
     "git-credential-manager"
     "lazygit"
 )
+
+# Add packages that are not relevant on all platforms
+isYes "${setupFirewall}" && packages+=("ufw")
+isYes "${setupAvahi}" && packages+=("avahi-daemon")
 
 # Create local bin folder if it does not exist
 mkdir -p ~/.local/bin
@@ -522,12 +565,31 @@ done
 # endregion
 
 # =========================
-# === SSH, CLOUD & MOUNT ==
+# === SSH, PASS, CLOUD ====
 # =========================
 # region
 
 # Runs script to configure SSH
-runLocalScript "ssh-setup-and-config"
+if isYes "${setupSsh}"; then
+
+    runLocalScript "ssh-setup-and-config"
+
+else
+
+    logMessage "Skipping SSH setup (setupSsh='${setupSsh}')." "INFO"
+
+fi
+
+# Runs script to configure GPG and 'pass' (needed for credential storage)
+if isYes "${setupPass}"; then
+
+    runLocalScript "gpg-pass-setup"
+
+else
+
+    logMessage "Skipping GPG and 'pass' setup (setupPass='${setupPass}')." "INFO"
+
+fi
 
 # Runs script to configure cloud and network client(s)
 runLocalScript "cloud-client-setup"
@@ -539,25 +601,40 @@ runLocalScript "cloud-client-setup"
 # =========================
 # region
 
-logMessage "Configuring GitHub user and local repo location..." "INFO"
+# The GitHub user and repo location are needed for the dotfiles and for storing GitHub credentials
+if isYes "${setupDotfiles}" || isYes "${setupPass}"; then
 
-# Prompt for GitHub credentials for repository access
+    logMessage "Configuring GitHub user and local repo location..." "INFO"
 
-while [[ -z "$personalGithubUser" || -z "$personalReposPath" ]]; do
+    # Prompt for GitHub user and repo location if not set in config
+    while [[ -z "$personalGithubUser" || -z "$personalReposPath" ]]; do
 
-    echo "To authenticate your GitHub account you need to provide the following information:"
+        echo "To authenticate your GitHub account you need to provide the following information:"
 
-    # Prompt for cloud credentials if not set in config
-    [[ -n "$personalGithubUser" ]] || read -p "GitHub Username: " 2>&1 personalGithubUser
-    [[ -n "$personalReposPath" ]] || read -p "Local Repo Location: " 2>&1 personalReposPath
+        [[ -n "$personalGithubUser" ]] || read -p "GitHub Username: " 2>&1 personalGithubUser
+        [[ -n "$personalReposPath" ]] || read -p "Local Repo Location: " 2>&1 personalReposPath
 
-done
+    done
 
-# Clone and run the dotfiles setup script
-cloneAndRunExternalScript "${personalGithubUser}" ".dotfiles" "deploy-config-linux.sh"
+    # Prepare the workspace path
+    mkdir -p "${personalReposPath}"
 
-# Source common environment variables
-[ -f "$HOME/.env" ] && source "$HOME/.env"
+fi
+
+if isYes "${setupDotfiles}"; then
+
+    # Clone and run the dotfiles setup script (a failure should not stop the rest of the setup)
+    cloneAndRunExternalScript "${personalGithubUser}" ".dotfiles" "deploy-config-linux.sh" \
+        || logMessage "Dotfiles setup failed. Continuing..." "ERROR"
+
+    # Source common environment variables
+    [ -f "$HOME/.env" ] && source "$HOME/.env"
+
+else
+
+    logMessage "Skipping dotfiles setup (setupDotfiles='${setupDotfiles}')." "INFO"
+
+fi
 
 #endregion
 
@@ -688,67 +765,99 @@ convertRepoToSSH() {
 # =========================
 # region
 
-# Check if GitHub credentials are already stored
-if ls "$HOME/.password-store" 2>/dev/null | grep -q "git"; then
+# Store a GitHub token using Git Credential Manager (backed by 'pass')
+configureGithubCredentials() {
 
-    personalGithubCredentialsStored=true
+    # Credentials are stored in the 'pass' store, so it has to be initialized
+    if [[ ! -f "$HOME/.password-store/.gpg-id" ]]; then
 
-else
+        logMessage "The 'pass' store is not initialized. Skipping GitHub credential configuration." "WARNING"
 
-    personalGithubCredentialsStored=false
-
-fi
-
-# Prompt user to configure GitHub credentials for HTTPS access
-while [[ "${personalGithubCredentialsStored}" != "true" ]]; do
-
-    [ -n "$storeGithubCredentials" ] || read -p "Do you want to configure GitHub credentials for HTTPS access? (Y/n): " 2>&1 storeGithubCredentials
-
-    # Set default choice to Y
-    storeGithubCredentials="${storeGithubCredentials:-Y}"
-
-    # Check user choice
-    if [[ "${storeGithubCredentials}" =~ ^[Nn]$ ]]; then
-
-        logMessage "Skipping GitHub credential configuration." "INFO"
-        break
+        return 0
 
     fi
 
-    # Prompt for cloud credentials if not set in config
-    [[ -n "$personalGithubToken" ]] || read -p "GitHub PAT ('gho_<token>'): " 2>&1 personalGithubToken
+    # Without a credential helper the credentials would not actually be stored
+    if ! git config --get-all credential.helper | grep -q .; then
 
-    # Check that the GitHub token starts with 'gho_'
-    if [[ "${personalGithubToken}" != gho_* ]]; then
+        logMessage "No Git credential helper is configured (should be done by the dotfiles). Skipping GitHub credential configuration." "WARNING"
 
-        logMessage "Invalid GitHub token. The token must start with 'gho_'." "ERROR"
+        return 0
 
-        personalGithubToken=""
+    fi
 
-    else
+    # Check if GitHub credentials are already stored
+    if [[ -d "$HOME/.password-store/git" ]]; then
 
-        # Configure GPG TTY for Git Credential Manager
-        export GPG_TTY=$(tty)
+        logMessage "GitHub credentials are already stored." "DEBUG"
 
-        # Store GitHub credentials using Git Credential Manager
-        if printf "protocol=https\nhost=github.com\nusername=${personalGithubUser}\npassword=${personalGithubToken}\n" \
-        | git credential approve; then
+        return 0
 
-            logMessage "GitHub credentials stored successfully." "DEBUG"
+    fi
 
-            personalGithubCredentialsStored=true
+    # Prompt user to configure GitHub credentials for HTTPS access
+    while true; do
 
-        else
+        [ -n "$storeGithubCredentials" ] || read -p "Do you want to configure GitHub credentials for HTTPS access? (Y/n): " 2>&1 storeGithubCredentials
 
-            logMessage "Failed to store GitHub credentials." "ERROR"
+        # Set default choice to Y
+        storeGithubCredentials="${storeGithubCredentials:-Y}"
 
-            personalGithubToken=""
+        # Check user choice
+        if [[ "${storeGithubCredentials,,}" =~ ^(n|no)$ ]]; then
+
+            logMessage "Skipping GitHub credential configuration." "INFO"
+
+            return 0
 
         fi
 
-    fi
+        # Prompt for token if not set in config
+        [[ -n "$personalGithubToken" ]] || read -p "GitHub PAT ('gho_<token>'): " 2>&1 personalGithubToken
 
-done
+        # Check that the GitHub token starts with 'gho_'
+        if [[ "${personalGithubToken}" != gho_* ]]; then
+
+            logMessage "Invalid GitHub token. The token must start with 'gho_'." "ERROR"
+
+            personalGithubToken=""
+
+        else
+
+            # Configure GPG TTY for Git Credential Manager
+            export GPG_TTY=$(tty)
+
+            # Store GitHub credentials using Git Credential Manager
+            if printf "protocol=https\nhost=github.com\nusername=${personalGithubUser}\npassword=${personalGithubToken}\n" \
+            | git credential approve; then
+
+                logMessage "GitHub credentials stored successfully." "DEBUG"
+
+                return 0
+
+            else
+
+                logMessage "Failed to store GitHub credentials." "ERROR"
+
+                personalGithubToken=""
+
+            fi
+
+        fi
+
+    done
+
+}
+
+if isYes "${setupPass}"; then
+
+    configureGithubCredentials
+
+else
+
+    logMessage "Skipping GitHub credential configuration (setupPass='${setupPass}')." "INFO"
+
+fi
 
 # endregion
 
@@ -760,13 +869,14 @@ done
 # =========================
 # region
 
-tmuxConfigDirectory="${XDG_CONFIG_HOME}/tmux"
+tmuxConfigDirectory="${XDG_CONFIG_HOME:-${HOME}/.config}/tmux"
 tpmDirectory="${tmuxConfigDirectory}/plugins"
 
 # Proceed with TPM setup only if the TMUX config directory exists
 if [[ -d "${tmuxConfigDirectory}" ]]; then
 
-    cloneAndRunExternalScript "tmux-plugins" "tpm" "bin/install_plugins" "${tpmDirectory}" > /dev/null 2>&1
+    cloneAndRunExternalScript "tmux-plugins" "tpm" "bin/install_plugins" "${tpmDirectory}" > /dev/null 2>&1 \
+        || logMessage "TPM plugin installation failed. Continuing..." "WARNING"
 
 else
 
@@ -784,8 +894,8 @@ fi
 # Check if ZSH is installed and set as the default shell if ZSH environment file exists
 if command -v zsh &> /dev/null && [[ -f "$HOME/.zshenv" ]]; then
 
-    # Check that ZSH is not already default shell
-    if [[ "$SHELL" != "$(which zsh)" ]]; then
+    # Check that ZSH is not already default shell ($SHELL is not updated until next login)
+    if [[ "$(getent passwd "${USER}" | cut -d: -f7)" != "$(which zsh)" ]]; then
 
         logMessage "Setting ZSH as the default shell..." "INFO"
 
@@ -817,9 +927,20 @@ logMessage "Setup and config script completed."
 
 logMessage "System setup is complete. A reboot is recommended to ensure all changes take effect." "INFO"
 
-# Prompt user for reboot
-read -p "Would you like to reboot the system now? (y/N): " rebootChoice 2>&1
-echo
+# A reboot is not possible from inside WSL
+if [[ "${platform}" == "wsl" ]]; then
+
+    logMessage "Running in WSL. To apply all changes, run 'wsl --shutdown' from Windows and start the distribution again." "WARNING"
+
+    rebootChoice="n"
+
+else
+
+    # Prompt user for reboot
+    read -p "Would you like to reboot the system now? (y/N): " rebootChoice 2>&1
+    echo
+
+fi
 
 # Check user choice and reboot if confirmed
 if [[ $rebootChoice =~ ^[Yy]$ ]]; then
@@ -833,8 +954,6 @@ if [[ $rebootChoice =~ ^[Yy]$ ]]; then
     sudo reboot
 
 else
-
-    logMessage "Reboot skipped. Please remember to reboot manually when convenient to ensure all changes take effect." "WARNING"
 
     # Return to home directory
     cd ~

@@ -115,12 +115,22 @@ else
 
 fi
 
+# PLATFORM DETECTION AND STEP DEFAULTS (see platform.sh)
+source "$(dirname "${BASH_SOURCE[0]}")/platform.sh"
+
 # DEFAULT VALUES
 
 # Get the username from the $USER environment variable
 username="${USER}"
 
 logMessage "Setting up Personal cloud directory..." "INFO"
+
+# Helper to check if an entry (first or second column) exists in /etc/fstab (exact match, no pattern matching)
+fstabHasEntry() {
+
+    awk -v entry="$1" -v column="${2:-1}" '$column == entry { found = 1 } END { exit !found }' /etc/fstab
+
+}
 
 # Set the path to the cloud storage directory
 [[ -n "$localCloudPath" ]] || localCloudPath="${HOME}/cloud/personal"
@@ -143,13 +153,19 @@ connectPersonalCloud=false
 [[ -n "$connectCloud" ]] || read -p "Do you want to connect to a personal cloud directory? [Y/n]: " 2>&1 connectCloud
 
 # Check the user's response (default to 'yes' on Enter)
-if [[ -z "$connectCloud" || "$connectCloud" =~ ^[Yy]$ ]]; then
+if [[ -z "$connectCloud" || "${connectCloud,,}" =~ ^(y|yes)$ ]]; then
 
-    # Check if the local cloud directory already exists
-    if [[ -d "${localCloudPath}" ]]; then
+    # Check if the local cloud directory has any content (excluding . and ..)
+    if [[ -d "${localCloudPath}" && $(ls -A "${localCloudPath}") ]]; then
 
-        # Check if directory has any content (excluding . and ..)
-        if [[ $(ls -A "${localCloudPath}") ]]; then
+        # A sync database or a mount means it was set up by an earlier run, so just continue
+        if compgen -G "${localCloudPath}/.sync_*.db" > /dev/null || mountpoint -q "${localCloudPath}"; then
+
+            logMessage "The local cloud directory is already set up (${localCloudPath})." "DEBUG"
+
+            connectPersonalCloud=true
+
+        else
 
             logMessage "The local cloud directory is not empty (${localCloudPath})." "WARNING"
 
@@ -157,10 +173,11 @@ if [[ -z "$connectCloud" || "$connectCloud" =~ ^[Yy]$ ]]; then
             [[ -n "$continueWithContent" ]] || read -p "Do you want to continue and potentially overwrite existing content? [Y/n]: " 2>&1 continueWithContent
 
             # Check the user's response (default to 'yes' on Enter)
-            if [[ -z "$continueWithContent" || "$continueWithContent" =~ ^[Yy]$ ]]; then
+            if [[ -z "$continueWithContent" || "${continueWithContent,,}" =~ ^(y|yes)$ ]]; then
 
-                # Set flag to indicate cloud sync should be performed
+                # Set flags to indicate cloud sync should be performed (and that it has unsynced content)
                 connectPersonalCloud=true
+                localCloudHasContent=true
 
             fi
 
@@ -168,15 +185,20 @@ if [[ -z "$connectCloud" || "$connectCloud" =~ ^[Yy]$ ]]; then
 
     else
 
-        # Create the directory if it does not exist
+        # Create the directory if it does not exist (an empty directory is also fine to sync into)
         mkdir -p "${localCloudPath}"
 
-        logMessage "Created local cloud directory at '${localCloudPath}'." "DEBUG"
+        logMessage "Local cloud directory is ready at '${localCloudPath}'." "DEBUG"
 
         # Set flag to indicate cloud sync should be performed
         connectPersonalCloud=true
 
     fi
+
+else
+
+    # Prepare the path even if no client is configured here (e.g. a desktop client configured in the UI)
+    mkdir -p "${localCloudPath}"
 
 fi
 
@@ -237,7 +259,7 @@ if [[ "$connectPersonalCloud" == "true" && (-z "$connectMethod" || "$connectMeth
     # region
 
     # Check if there is a .sync_*.db file in the root of the local cloud directory
-    if [[ "${continueWithContent}" == "true" && ! $(ls "${localCloudPath}"/.sync_*.db 1> /dev/null 2>&1) ]]; then
+    if [[ "${localCloudHasContent}" == "true" ]]; then
 
         logMessage "The local directory has content but no sync file." "WARNING"
 
@@ -312,18 +334,18 @@ if [[ "$connectPersonalCloud" == "true" && (-z "$connectMethod" || "$connectMeth
             find "${localCloudPath}" -type f -name "nextcloud-sync.sh" -exec chmod +x {} \;
 
             # Save cloud password securely for reuse if 'pass' is installed
-            if command -v pass &> /dev/null; then
+            if command -v pass &> /dev/null && [[ -f "${HOME}/.password-store/.gpg-id" ]]; then
 
                 logMessage "Saving cloud password securely using 'pass'..." "INFO"
 
                 # Insert or update the password in the pass store
-                echo "${cloudPassword}" | pass insert -e nextcloud/"${cloudUsername}"
+                echo "${cloudPassword}" | pass insert -e -f nextcloud/"${cloudUsername}"
 
                 logMessage "Cloud password saved to pass store under 'nextcloud/${cloudUsername}'." "DEBUG"
 
             else
 
-                logMessage "The 'pass' application is not installed. Skipping secure password storage." "WARNING"
+                logMessage "The 'pass' store is not available. Skipping secure password storage." "WARNING"
 
             fi
 
@@ -471,7 +493,7 @@ if [[ "$connectPersonalCloud" == "true" && ("$connectMethod" =~ ^[Mm]$) ]]; then
         done
 
         # Check if the URL already exists in the configuration file
-        if grep -q "^${url}" "${configFile}"; then
+        if sudo awk -v entry="${url}" '$1 == entry { found = 1 } END { exit !found }' "${configFile}"; then
 
             logMessage "The URL '${url}' already exists in the configuration file." "INFO"
 
@@ -488,7 +510,7 @@ if [[ "$connectPersonalCloud" == "true" && ("$connectMethod" =~ ^[Mm]$) ]]; then
         fi
 
         # Check if the URL already exists in /etc/fstab
-        if grep -q "^${url}" /etc/fstab; then
+        if fstabHasEntry "${url}"; then
 
             logMessage "The URL '${url}' already exists in the fstab (/etc/fstab)." "INFO"
 
@@ -505,15 +527,19 @@ if [[ "$connectPersonalCloud" == "true" && ("$connectMethod" =~ ^[Mm]$) ]]; then
             # Reload the systemd manager configuration
             sudo systemctl daemon-reload
 
-            # Mount the cloud storage directory
-            sudo mount "${localCloudPath}"
-
         fi
 
     else
 
         # Skip the operation
         logMessage "No changes were made to WebDav client configuration." "INFO"
+
+    fi
+
+    # Mount the cloud storage directory if configured but not mounted (also completes a partially finished run)
+    if fstabHasEntry "${localCloudPath}" 2 && ! mountpoint -q "${localCloudPath}"; then
+
+        sudo mount "${localCloudPath}"
 
     fi
 
@@ -526,37 +552,43 @@ fi
 # ===================================
 # region
 
-# Set flag to skip cloud connection
+# Set flag to skip SMB mount
 connectSmbShare=false
 
-# Set default mount point if not specified
-[[ -n "$smbMountPoint" ]] || smbMountPoint="/mnt/smb"
+# Set default mount point if not specified (WSL already has the Windows host drive mounted at /mnt/c)
+if [[ -z "$smbMountPoint" ]]; then
+
+    [[ "${platform}" == "wsl" ]] && smbMountPoint="/mnt/c" || smbMountPoint="/mnt/smb"
+
+fi
+
+# Ask if the work setup should be performed if not set in config or by the platform default
+[[ -n "$setupWork" ]] || read -p "Do you want to set up the work host share and cloud? [Y/n]: " 2>&1 setupWork
+
+# Check the user's response (default to 'yes' on Enter)
+if [[ -n "$setupWork" && ! "${setupWork,,}" =~ ^(y|yes)$ ]]; then
+
+    logMessage "Skipping work host share and cloud setup (setupWork='${setupWork}')." "INFO"
+
+    # Set flag to indicate no SMB share mount point was created or exists
+    noSmbShareMountPoint=true
 
 # Check if the mount point is already mounted
-if mountpoint -q "${smbMountPoint}"; then
+elif mountpoint -q "${smbMountPoint}"; then
 
     logMessage "There is already a mountpoint on '${smbMountPoint}'. Skipping SMB mount step." "DEBUG"
 
+# The host drive is expected to be mounted by WSL itself
+elif [[ "${platform}" == "wsl" ]]; then
+
+    logMessage "Running in WSL, but the host drive is not mounted on '${smbMountPoint}'. Skipping work host share setup." "WARNING"
+
+    noSmbShareMountPoint=true
+
 else
 
-    # Prompt the user for SMB share setup
-    [[ -n "$connectSmb" ]] || read -p "Do you want to set up a mountpoint for an SMB/CIFS share? [Y/n]: " 2>&1 connectSmb
-
-    # Check the user's response
-    if [[ -z "$connectSmb" || "$connectSmb" =~ ^[Yy]$ ]]; then
-
-        # Set flag to indicate cloud connection should be performed
-        connectSmbShare=true
-
-    else
-
-        # Skip the operation
-        logMessage "No new SMB share mountpoint configured."
-
-        # Set flag to indicate no SMB share mount point was created or exists
-        noSmbShareMountPoint=true
-
-    fi
+    # Set flag to indicate SMB share should be mounted
+    connectSmbShare=true
 
 fi
 
@@ -663,27 +695,13 @@ EOF
 
     fi
 
-    logMessage "Mounting SMB share ('//${smbHost}/${smbShare}') to mount point ('${smbMountPoint}')..." "INFO"
-
-    # Attempt to mount the SMB share
-    if ! sudo mount -t cifs "//${smbHost}/${smbShare}" "${smbMountPoint}" \
-        -o credentials=/etc/smb-credentials,uid=$(id -u),gid=$(id -g),vers=3.0,mfsymlinks; then
-
-        logMessage "Mounting SMB share failed. Please check credentials, network, or permissions." "ERROR"
-
-        exit 1
-
-    fi
-
-    logMessage "SMB share mounted successfully." "DEBUG"
-
-    # Add fstab line to ensure mount persists across reboots
+    # Add fstab line to ensure mount persists across reboots (done before mounting so a failed mount can be retried)
 
     # Set the SMB share path
     smbSharePath="//${smbHost}/${smbShare}"
 
-    # Check if the entry already exists in /etc/fstab
-    if grep -q "^${smbSharePath}" /etc/fstab; then
+    # Check if the entry already exists in /etc/fstab (exact match as the share name can contain '$')
+    if fstabHasEntry "${smbSharePath}"; then
 
         logMessage "The SMB share '${smbSharePath}' already exists in the fstab (/etc/fstab)." "INFO"
 
@@ -698,6 +716,20 @@ EOF
         logMessage "Entry successfully added to fstab (/etc/fstab)." "DEBUG"
 
     fi
+
+    logMessage "Mounting SMB share ('${smbSharePath}') to mount point ('${smbMountPoint}')..." "INFO"
+
+    # Attempt to mount the SMB share
+    if ! sudo mount -t cifs "${smbSharePath}" "${smbMountPoint}" \
+        -o credentials=/etc/smb-credentials,uid=$(id -u),gid=$(id -g),vers=3.0,mfsymlinks; then
+
+        logMessage "Mounting SMB share failed. Please check credentials, network, or permissions." "ERROR"
+
+        exit 1
+
+    fi
+
+    logMessage "SMB share mounted successfully." "DEBUG"
 
     # endregion
 
@@ -745,14 +777,19 @@ else
 
         else
 
+            # Make sure the parent directory exists
+            mkdir -p "$(dirname "${localFromSmbCloudPath}")"
+
             # Create the Linux-native symlink pointing to the resolved share path
-            if ! ln -s "${linuxTarget}" "${localFromSmbCloudPath}"; then
+            if ln -s "${linuxTarget}" "${localFromSmbCloudPath}"; then
+
+                logMessage "Symlink created: '${localFromSmbCloudPath} → ${linuxTarget}'" "INFO"
+
+            else
 
                 logMessage "Failed to create symlink '${localFromSmbCloudPath} → ${linuxTarget}'" "ERROR"
 
             fi
-
-            logMessage "Symlink created: '${localFromSmbCloudPath} → ${linuxTarget}'" "INFO"
 
         fi
 

@@ -23,6 +23,16 @@ The `linux-setup-deployer` repository provides automation scripts to streamline 
 - Ensures the system is updated and ready for use.
 - Supports debug and verbose modes for detailed logging and output.
 
+## Platforms and Skipping Steps
+
+The scripts detect the **platform** (`wsl`, `hyperv` or `other` for bare metal/other hypervisors) and the **environment** (`desktop` or `headless`) in [platform.sh](platform.sh). The two are independent, e.g. bare metal can be headless.
+
+Each major step has a switch in the config file (`setupLocale`, `setupSsh`, `setupFirewall`, `setupAvahi`, `setupPass`, `setupDotfiles`, `setupWork`) that can be set to `yes` or `no`. Left empty, the default for the detected platform/environment is used (see `setup.conf.template` for the table). Detection can also be overridden with `platform` and `environment`.
+
+Steps that depend on others are skipped with a warning when the prerequisite is missing (e.g. GitHub credentials need `pass` and a Git credential helper).
+
+The scripts can be run repeatedly: each step checks the current state of the system, so a partially completed run can simply be started again.
+
 ## Requirements and Target System
 
 - Tested on Ubuntu Server and Ubuntu WSL (Windows Subsystem for Linux).
@@ -58,7 +68,7 @@ The `linux-setup-deployer` repository provides automation scripts to streamline 
    - The user might be prompted for their sudo password several times during the execution.
 
 3. **SSH Setup (Optional)**
-   If you need to configure an SSH server with key-based authentication:
+   Run automatically by the main script unless `setupSsh` is `no` (default on WSL). To run it on its own:
 
    ```bash
    ./ssh-setup-and-config.sh [OPTIONS]
@@ -70,7 +80,7 @@ The `linux-setup-deployer` repository provides automation scripts to streamline 
    The main setup script clones and executes a script from a `dotfiles` repository:
 
    - URL: [Dotfiles Repo](`https://github.com/norsemangrey/.dotfiles.git`)
-   - Script: `install-linux.sh`
+   - Script: `deploy-config-linux.sh`
 
    Ensure the `dotfiles` repository has appropriate configurations and an executable installation script.
 
@@ -84,6 +94,20 @@ This script:
 - Installs and configures various apps and tools.
 - Clones the `dotfiles` repository and executes its installation script.
 - Supports logging and error handling through external utilities.
+
+### gpg-pass-setup.sh
+
+This script:
+
+- Installs `pass` and creates a GPG key if none exists.
+- Initializes the password store (used for GitHub and Nextcloud credentials).
+
+### cloud-client-setup.sh
+
+This script:
+
+- Syncs (Nextcloud CLI) or mounts (WebDAV) the personal cloud directory.
+- Work setup (when enabled): mounts the host SMB share (not needed on WSL), links the work cloud directory and copies the personal cloud to the host.
 
 ### ssh-setup-and-config.sh
 
