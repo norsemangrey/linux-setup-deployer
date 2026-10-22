@@ -3,7 +3,11 @@
 # Platform detection. Sourced by the setup scripts AFTER the config file.
 #
 # Two independent facts are detected (both can be overridden in the config file):
-#   platform:    wsl | hyperv | other   (other = bare metal or any other hypervisor)
+#   platform:    wsl | hyperv | proxmox | physical
+#                  wsl      = Windows Subsystem for Linux (hosted on Windows)
+#                  hyperv   = Hyper-V VM (hosted on Windows)
+#                  proxmox  = QEMU/KVM VM (Proxmox)
+#                  physical = anything else (bare metal)
 #   environment: desktop | headless
 
 # Detect the platform
@@ -17,9 +21,13 @@ detectPlatform() {
 
         echo "hyperv"
 
+    elif grep -qi "qemu" /sys/class/dmi/id/sys_vendor 2>/dev/null; then
+
+        echo "proxmox"
+
     else
 
-        echo "other"
+        echo "physical"
 
     fi
 
