@@ -158,15 +158,28 @@ installPackage() {
         # Perform any pre-installation actions
         preInstallationActions "${packageName}"
 
-        # Check for alternative installation methods
+        # Check for alternative installation methods (0 = done, 1 = none available, other = failed)
         if alternativeInstallationActions "${packageName}"; then
 
             logMessage "Alternative installation for '${packageName}' completed successfully." "DEBUG"
 
         else
 
-            # Install the package
-            run sudo apt-get install -y "${packageName}"
+            alternativeStatus=$?
+
+            if [[ ${alternativeStatus} -eq 1 ]]; then
+
+                # Install the package
+                run sudo apt-get install -y "${packageName}"
+
+            else
+
+                # Return success to not abort the script (error trap), so remaining packages are still installed
+                logMessage "Alternative installation of '${packageName}' failed. Skipping." "ERROR"
+
+                return 0
+
+            fi
 
         fi
 
@@ -193,21 +206,23 @@ alternativeInstallationActions() {
         "oh-my-posh")
 
             # Download Oh-My-Posh
-            sudo wget https://github.com/JanDeDobbeleer/oh-my-posh/releases/latest/download/posh-linux-amd64 -O /usr/local/bin/oh-my-posh
+            sudo wget https://github.com/JanDeDobbeleer/oh-my-posh/releases/latest/download/posh-linux-amd64 -O /usr/local/bin/oh-my-posh || return 2
 
             return 0
             ;;
 
         "git-credential-manager")
 
-            # Get the latest Git Credential Manager release download URL
-            downloadUrl=$(curl -s https://api.github.com/repos/git-ecosystem/git-credential-manager/releases/latest | grep "browser_download_url" | grep ".deb" | cut -d '"' -f 4)
+            # Get the latest Git Credential Manager release download URL (x64 package only, releases also include arm64)
+            downloadUrl=$(curl -s https://api.github.com/repos/git-ecosystem/git-credential-manager/releases/latest | grep "browser_download_url" | grep "x64.*\.deb" | cut -d '"' -f 4)
+
+            [[ -n "${downloadUrl}" ]] || return 2
 
             # Download Git Credential Manager
-            sudo wget "${downloadUrl}" -O ${DOWNLOADS}/gcm-linux.deb
+            sudo wget "${downloadUrl}" -O ${DOWNLOADS}/gcm-linux.deb || return 2
 
             # Install Git Credential Manager
-            sudo dpkg -i ${DOWNLOADS}/gcm-linux.deb
+            sudo dpkg -i ${DOWNLOADS}/gcm-linux.deb || return 2
 
             return 0
             ;;
@@ -217,14 +232,16 @@ alternativeInstallationActions() {
             # Download the latest Lazygit release
             downloadUrl=$(curl -s https://api.github.com/repos/jesseduffield/lazygit/releases/latest | grep "browser_download_url" | grep "linux_x86_64.tar.gz" | cut -d '"' -f 4)
 
+            [[ -n "${downloadUrl}" ]] || return 2
+
             # Download and extract Lazygit
-            wget "${downloadUrl}" -O ${DOWNLOADS}/lazygit.tar.gz
+            wget "${downloadUrl}" -O ${DOWNLOADS}/lazygit.tar.gz || return 2
 
             # Extract Lazygit
-            tar -xzf ${DOWNLOADS}/lazygit.tar.gz -C ${DOWNLOADS}
+            tar -xzf ${DOWNLOADS}/lazygit.tar.gz -C ${DOWNLOADS} || return 2
 
             # Install Lazygit
-            sudo install ${DOWNLOADS}/lazygit -D -t /usr/local/bin/
+            sudo install ${DOWNLOADS}/lazygit -D -t /usr/local/bin/ || return 2
 
             return 0
             ;;
