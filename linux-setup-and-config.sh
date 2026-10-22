@@ -121,6 +121,11 @@ else
 
 fi
 
+# PLATFORM DETECTION (see platform.sh)
+source "$(dirname "${BASH_SOURCE[0]}")/platform.sh"
+
+logMessage "Platform: '${platform}', environment: '${environment}'." "INFO"
+
 # BUSINESS LOGIC SETUP
 
 # Check if sudo password is valid (not expired)
