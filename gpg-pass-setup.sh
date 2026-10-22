@@ -143,8 +143,8 @@ else
     logMessage "Installing Pass Password Manager..." "INFO"
 
     # Install Pass - The Standard Unix Password Manager
-    run sudo apt-get update
-    run sudo apt-get install -y pass
+    run aptGet update
+    run aptGet install -y pass
 
 fi
 

@@ -191,7 +191,7 @@ installPackage() {
         if [[ ${result} -eq 1 ]]; then
 
             # Install the package
-            run sudo apt-get install -y "${packageName}"
+            run aptGet install -y "${packageName}"
             result=$?
 
         fi
@@ -246,6 +246,7 @@ alternativeInstallationActions() {
             [[ -n "${downloadUrl}" ]] || return 2
 
             # Download and install Git Credential Manager
+            waitForApt
             wget "${downloadUrl}" -O "${DOWNLOADS}/gcm-linux.deb" && sudo dpkg -i "${DOWNLOADS}/gcm-linux.deb" || return 2
 
             return 0
@@ -289,8 +290,9 @@ preInstallationActions() {
         "fastfetch")
 
             # Add repository, update and install Fastfetch
+            waitForApt
             run sudo add-apt-repository -y ppa:zhangsongcui3371/fastfetch
-            run sudo apt-get update
+            run aptGet update
 
             ;;
 
@@ -435,10 +437,10 @@ logMessage "Starting setup and config script..." "INFO"
 logMessage "Updating and upgrading the system..." "INFO"
 
 # Ensure the system is up-to-date
-run sudo apt-get update -y && run sudo apt-get upgrade -y
+run aptGet update -y && run aptGet upgrade -y
 
 # Clean up unnecessary packages
-run sudo apt-get autoremove -y
+run aptGet autoremove -y
 
 # endregion
 
@@ -515,8 +517,8 @@ else
 
     fi
 
-    # Restore preferred default locale AFTER generation
-    sudo update-locale LANG=nb_NO.UTF-8 LC_ALL=nb_NO.UTF-8
+    # English language with Norwegian regional formats (no LC_ALL, it overrides everything)
+    sudo update-locale --reset LANG=en_US.UTF-8 LC_TIME=nb_NO.UTF-8 LC_MONETARY=nb_NO.UTF-8 LC_MEASUREMENT=nb_NO.UTF-8 LC_PAPER=nb_NO.UTF-8
 
     # Unset temporary overrides
     unset LC_ALL

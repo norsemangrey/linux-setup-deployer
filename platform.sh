@@ -109,5 +109,46 @@ defaultTo setupDotfiles "yes"
 # Architecture name used by the apt packages and release downloads
 architecture="$(dpkg --print-architecture 2>/dev/null)"
 
+# Keep tool messages (apt etc.) in English whatever the system language is
+export LC_MESSAGES=C
+
+# Wait for other package managers (e.g. unattended-upgrades on a fresh boot) to release the apt/dpkg locks
+waitForApt() {
+
+    local waited=0
+    local lockFiles=(/var/lib/dpkg/lock-frontend /var/lib/dpkg/lock /var/lib/apt/lists/lock)
+
+    while sudo fuser "${lockFiles[@]}" &>/dev/null; do
+
+        if (( waited == 0 )); then
+
+            logMessage "Waiting for another package manager to finish..." "INFO"
+
+        elif (( waited >= 900 )); then
+
+            logMessage "Gave up waiting for the apt/dpkg locks after ${waited} seconds." "WARNING"
+
+            return 0
+
+        fi
+
+        sleep 5
+        waited=$(( waited + 5 ))
+
+    done
+
+    return 0
+
+}
+
+# apt-get that waits for the locks first (use with 'run' to hide output)
+aptGet() {
+
+    waitForApt
+
+    sudo apt-get -o DPkg::Lock::Timeout=300 "$@"
+
+}
+
 # Never let the last command status fail the sourcing script (the ERR trap would fire)
 return 0

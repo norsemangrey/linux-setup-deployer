@@ -235,13 +235,14 @@ if [[ "$connectPersonalCloud" == "true" && (-z "$connectMethod" || "$connectMeth
         logMessage "Installing Nextcloud CLI..." "INFO"
 
         # Add Nextcloud repository
+        waitForApt
         run sudo add-apt-repository -y ppa:nextcloud-devs/client
 
         # Update package lists
-        run sudo apt-get update
+        run aptGet update
 
         # Installing Nextcloud CLI (run non-interactively)
-        run sudo apt-get install -y nextcloud-client
+        run aptGet install -y nextcloud-client
 
         logMessage "Nextcloud CLI installed successfully." "DEBUG"
 
@@ -387,7 +388,7 @@ if [[ "$connectPersonalCloud" == "true" && ("$connectMethod" =~ ^[Mm]$) ]]; then
         echo davfs2 davfs2/use_locks boolean true | sudo debconf-set-selections
 
         # Installing DAVFS2 (run non-interactively)
-        run sudo apt-get install -y davfs2
+        run aptGet install -y davfs2
 
         logMessage "WebDav Client (davfs2) installed successfully." "DEBUG"
 
@@ -610,7 +611,7 @@ if [[ "$connectSmbShare" == "true" ]]; then
         logMessage "Installing CIFS Share Utilities (cifs-utils)..." "INFO"
 
         # Installing cifs-utils (run non-interactively)
-        run sudo apt-get install -y cifs-utils
+        run aptGet install -y cifs-utils
 
         logMessage "CIFS Share Utilities (cifs-utils) installed successfully." "DEBUG"
 
