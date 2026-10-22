@@ -476,8 +476,9 @@ else
 
 fi
 
-# Restore preferred default locale AFTER generation
-sudo update-locale LANG=nb_NO.UTF-8 LC_ALL=nb_NO.UTF-8
+# Set English display language with Norwegian regional formats
+# (--reset also removes the old LC_ALL, which would override everything else)
+sudo update-locale --reset LANG=en_US.UTF-8 LC_TIME=nb_NO.UTF-8 LC_MONETARY=nb_NO.UTF-8 LC_PAPER=nb_NO.UTF-8 LC_MEASUREMENT=nb_NO.UTF-8
 
 # Unset temporary overrides
 unset LC_ALL
