@@ -141,7 +141,7 @@ logMessage "Setting up Personal cloud directory..." "INFO"
 connectPersonalCloud=false
 
 # Ask the user if they want to connect to a cloud directory
-if resolveYesNoSetting connectCloud "Do you want to connect to a personal cloud directory?"; then
+if resolveYesNoSetting setupPersonal "Do you want to set up personal cloud and dotfile paths?" && resolveYesNoSetting connectCloud "Do you want to connect to a personal cloud directory?"; then
 
     # Check if the local cloud directory already exists
     if [[ -d "${localCloudPath}" ]]; then
@@ -527,8 +527,15 @@ connectSmbShare=false
 # Set default mount point if not specified
 [[ -n "$smbMountPoint" ]] || smbMountPoint="/mnt/smb"
 
-# Check if the mount point is already mounted
-if mountpoint -q "${smbMountPoint}"; then
+# Check if work setup is disabled or the mount point is already mounted
+if ! resolveYesNoSetting setupWork "Do you want to set up work (SMB) cloud and dotfile paths?"; then
+
+    logMessage "Work setup is disabled. Skipping SMB mount step." "DEBUG"
+
+    # Set flag to indicate no SMB share mount point is used
+    noSmbShareMountPoint=true
+
+elif mountpoint -q "${smbMountPoint}"; then
 
     logMessage "There is already a mountpoint on '${smbMountPoint}'. Skipping SMB mount step." "DEBUG"
 
@@ -763,6 +770,10 @@ if [[ "${noSmbShareMountPoint}" == "true" ]]; then
 
     # Skip symlink creation
     logMessage "Skipping copying of local cloud files to remote host as no mount point exists." "WARNING"
+
+elif ! resolveYesNoSetting setupPersonal "Do you want to set up personal cloud and dotfile paths?"; then
+
+    logMessage "Personal setup is disabled. Skipping copy to remote host." "DEBUG"
 
 elif [[ ! $(ls -A "${localCloudPath}") ]]; then
 

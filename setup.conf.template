@@ -21,6 +21,14 @@ setupSsh="y"
 # Required for storing GitHub credentials and the Nextcloud password.
 setupGpgPass="y"
 
+# Set up personal cloud (and map personal dotfile paths).
+# n = no personal cloud and no personal dotfile paths, without warnings.
+setupPersonal="y"
+
+# Set up work cloud via SMB (and map work dotfile paths).
+# n = no SMB mount and no work dotfile paths, without warnings.
+setupWork="y"
+
 # Reboot when setup is done. Leave unset to be prompted (default no).
 rebootAfterSetup="n"
 
@@ -83,17 +91,21 @@ smbUsername="user@kexample.com"
 # Local cloud directory path (where personal cloud files are stored locally)
 # NOTE: The dotfiles hardcode ~/cloud/personal, ~/cloud/work and
 # ~/workspace/personal/repos/.dotfiles. The path settings below (localCloudPath,
-# localFromSmbCloudPath, dotfilesCloudPath, personalReposPath) must keep their
-# defaults for the dotfiles setup to work.
+# localFromSmbCloudPath, dotfilesCloudPath, dotfilesWorkPath, personalReposPath)
+# must keep their defaults for the dotfiles setup to work.
 localCloudPath="${HOME}/cloud/personal"
 
 # Path inside the personal cloud that the dotfiles setup links from.
-# Checked before the dotfiles run; the user is warned if it is missing or empty.
+# Personal paths are only mapped when setupPersonal is y and this has content.
 dotfilesCloudPath="${localCloudPath}/setup/dotfiles"
 
 # Local path where SMB cloud files will be accessed/symlinked
 # This creates a local symlink to access the work cloud directory from your home folder
 localFromSmbCloudPath="${HOME}/cloud/remote"
+
+# Path inside the work cloud that the dotfiles setup links from.
+# Work paths are only mapped when setupWork is y and this has content.
+dotfilesWorkPath="${localFromSmbCloudPath}/setup/dotfiles"
 
 # SMB share cloud directory path (work cloud directory on the remote share)
 # This is a relative path on the SMB share pointing to the work cloud directory

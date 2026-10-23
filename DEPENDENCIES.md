@@ -49,7 +49,7 @@ Notes:
 - The logger and error handler are optional. Each script falls back to a minimal `logMessage` if the logger is missing (soft dependency). `clone-and-execute-script.sh` has no fallback `logMessage`.
 - `setup.conf` is optional. Any value missing from it is prompted for interactively.
 - `ssh-setup-and-config.sh`, `gpg-pass-setup-and-config.sh` and `cloud-client-setup.sh` can also run standalone (`--config`), but then they must install/assume their own prerequisites (see below).
-- SSH and GPG/pass setup are each optional via `setupSsh` and `setupGpgPass` in `setup.conf` (prompted, default yes, if unset); the cloud script is always run and `connectCloud` / `connectSmb` select its parts. SSH and GPG/pass are independent of each other. All y/n settings are resolved by `resolveYesNoSetting` in [config-helpers.sh](./config-helpers.sh).
+- SSH, GPG/pass, personal and work setup are each optional via `setupSsh`, `setupGpgPass`, `setupPersonal` and `setupWork` in `setup.conf` (prompted, default yes, if unset). `setupPersonal` / `setupWork` gate the personal cloud / SMB mount and the matching dotfile paths; `connectCloud` / `connectSmb` remain as sub-options inside them. SSH and GPG/pass are independent of each other. All y/n settings are resolved by `resolveYesNoSetting` in [config-helpers.sh](./config-helpers.sh).
 - Child scripts inherit `-d` / `-v` from the main script; they do **not** inherit `--config`. They load the default `setup.conf` next to the script.
 
 ## 2. Execution order in `linux-setup-and-config.sh`
@@ -104,7 +104,7 @@ Only the edges above are real data/tool dependencies. Steps without an edge betw
 | GPG/pass setup | `gpg`, `pass` | Base system, apt | None on SSH setup |
 | Cloud setup | `pass` + initialized GPG store | GPG/pass setup | Soft (password not saved if `pass` is missing or not initialized) |
 | Dotfiles | `personalGithubUser`, `personalReposPath`, `git`, internet | `setup.conf` or prompt | Hard |
-| Dotfiles | Personal cloud dotfiles path (`dotfilesCloudPath`) present with content | Cloud setup (or existing content) | Soft (warns and asks to continue) |
+| Dotfiles | Selected personal and/or work dotfiles paths (`dotfilesCloudPath`, `dotfilesWorkPath`) with content | `setupPersonal` / `setupWork`, cloud / SMB setup (or existing content) | Soft (scope `both`/`personal`/`work`/`none` is exported as `DOTFILES_SCOPE`; a selected side without content is warned about and asks to continue; unselected sides are ignored silently) |
 | Dotfiles | `clone-and-execute-script.sh` | `utils/` | Hard |
 | `source ~/.env` | Dotfiles deployed | Dotfiles | Soft (skipped if missing) |
 | Certificates | `~/cloud/work/setup/certificates` | Cloud setup (SMB mount + symlink) | Soft (skipped if directory missing) |
@@ -198,12 +198,12 @@ Key points:
 
 | `setup.conf` section | Variables | Consumed by |
 |----------------------|-----------|-------------|
-| Features | `setupSsh`, `setupGpgPass`, `rebootAfterSetup` | `linux-setup-and-config.sh` |
+| Features | `setupSsh`, `setupGpgPass`, `setupPersonal`, `setupWork`, `rebootAfterSetup` | `linux-setup-and-config.sh` (`setupPersonal`, `setupWork` also `cloud-client-setup.sh`) |
 | Personal cloud | `connectCloud`, `continueWithContent`, `connectMethod` | `cloud-client-setup.sh` |
 | Cloud | `cloudAddress`, `cloudUsername`, `cloudPassword` | `cloud-client-setup.sh` |
 | SMB share | `connectSmb`, `smbHost`, `smbShare`, `smbMountPoint`, `smbUsername`, `smbPassword` | `cloud-client-setup.sh` |
 | Paths | `localCloudPath`, `localFromSmbCloudPath`, `smbCloudPath`, `smbFromLocalCloudPath` | `cloud-client-setup.sh` (the main script's certificate step hardcodes `~/cloud/work/setup/certificates`, which assumes `localFromSmbCloudPath` keeps its default; the dotfiles also hardcode `~/cloud/personal`, `~/cloud/work` and `~/workspace/personal/repos/.dotfiles`) |
-| Paths | `dotfilesCloudPath` | `linux-setup-and-config.sh` (pre-dotfiles check) |
+| Paths | `dotfilesCloudPath`, `dotfilesWorkPath` | `linux-setup-and-config.sh` (pre-dotfiles scope check) |
 | GPG | `gpgKeyType`, `gpgKeyLength`, `gpgNameReal`, `gpgNameEmail`, `gpgExpireDate` | `gpg-pass-setup-and-config.sh` |
 | GitHub | `storeGithubCredentials`, `personalGithubToken` | `linux-setup-and-config.sh` (credentials step) |
 | GitHub | `personalGithubUser`, `personalReposPath` | `linux-setup-and-config.sh` (dotfiles clone, repo paths) |

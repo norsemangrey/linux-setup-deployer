@@ -573,8 +573,23 @@ else
 
 fi
 
+# Personal (cloud) and work (SMB) setup, including their dotfile paths
+personalSelected=false
+workSelected=false
+
+if resolveYesNoSetting setupPersonal "Do you want to set up personal cloud and dotfile paths?"; then personalSelected=true; fi
+if resolveYesNoSetting setupWork "Do you want to set up work (SMB) cloud and dotfile paths?"; then workSelected=true; fi
+
 # Runs script to configure cloud and network client(s) (each part is optional in the script)
-runLocalScript "cloud-client-setup"
+if [[ "${personalSelected}" == "true" || "${workSelected}" == "true" ]]; then
+
+    runLocalScript "cloud-client-setup"
+
+else
+
+    logMessage "Personal and work setup are disabled. Skipping cloud setup." "INFO"
+
+fi
 
 # endregion
 
@@ -597,14 +612,49 @@ while [[ -z "$personalGithubUser" || -z "$personalReposPath" ]]; do
 
 done
 
-# Dotfiles symlinks depend on this cloud path, even if cloud setup was skipped
+# Dotfiles map the selected personal and/or work paths, limited to those with content
 : "${dotfilesCloudPath:=${HOME}/cloud/personal/setup/dotfiles}"
+: "${dotfilesWorkPath:=${HOME}/cloud/work/setup/dotfiles}"
 
-if [[ -z "$(ls -A "${dotfilesCloudPath}" 2>/dev/null)" ]]; then
+includePersonal=false
+includeWork=false
+selectedUnavailable=false
 
-    logMessage "Dotfiles cloud path '${dotfilesCloudPath}' is missing or empty. Some dotfile symlinks will not work." "WARNING"
+if [[ "${personalSelected}" == "true" ]]; then
 
-    read -r -p "Do you want to run the dotfiles setup anyway? [y/N]: " continueChoice
+    if [[ -n "$(ls -A "${dotfilesCloudPath}" 2>/dev/null)" ]]; then
+
+        includePersonal=true
+
+    else
+
+        selectedUnavailable=true
+
+        logMessage "Personal dotfiles path '${dotfilesCloudPath}' is missing or empty." "WARNING"
+
+    fi
+
+fi
+
+if [[ "${workSelected}" == "true" ]]; then
+
+    if [[ -n "$(ls -A "${dotfilesWorkPath}" 2>/dev/null)" ]]; then
+
+        includeWork=true
+
+    else
+
+        selectedUnavailable=true
+
+        logMessage "Work dotfiles path '${dotfilesWorkPath}' is missing or empty." "WARNING"
+
+    fi
+
+fi
+
+if [[ "${selectedUnavailable}" == "true" ]]; then
+
+    read -r -p "Some selected dotfile paths are unavailable and will not be mapped. Run the dotfiles setup anyway? [y/N]: " continueChoice
 
     if [[ ! "${continueChoice}" =~ ^[Yy]([Ee][Ss])?$ ]]; then
 
@@ -615,6 +665,29 @@ if [[ -z "$(ls -A "${dotfilesCloudPath}" 2>/dev/null)" ]]; then
     fi
 
 fi
+
+if [[ "${includePersonal}" == "true" && "${includeWork}" == "true" ]]; then
+
+    dotfilesScope="both"
+
+elif [[ "${includePersonal}" == "true" ]]; then
+
+    dotfilesScope="personal"
+
+elif [[ "${includeWork}" == "true" ]]; then
+
+    dotfilesScope="work"
+
+else
+
+    dotfilesScope="none"
+
+fi
+
+logMessage "Mapping dotfiles with scope '${dotfilesScope}'." "INFO"
+
+# Read by the dotfiles deploy script
+export DOTFILES_SCOPE="${dotfilesScope}"
 
 # Clone and run the dotfiles setup script
 cloneAndRunExternalScript "${personalGithubUser}" ".dotfiles" "deploy-config-linux.sh"
