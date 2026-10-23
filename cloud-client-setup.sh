@@ -59,6 +59,7 @@ externalErrorHandler=$(dirname "${BASH_SOURCE[0]}")"/utils/error-handling-functi
 # Source external logger and error handler (but allow execution without them)
 source "${externalErrorHandler}" "Failed to set up cloud/mount" || true
 source "${externalLogger}" || true
+source "$(dirname "${BASH_SOURCE[0]}")/config-helpers.sh"
 
 # Redirect output functions if not debug enabled
 run() {
@@ -140,10 +141,7 @@ logMessage "Setting up Personal cloud directory..." "INFO"
 connectPersonalCloud=false
 
 # Ask the user if they want to connect to a cloud directory
-[[ -n "$connectCloud" ]] || read -p "Do you want to connect to a personal cloud directory? [Y/n]: " 2>&1 connectCloud
-
-# Check the user's response (default to 'yes' on Enter)
-if [[ -z "$connectCloud" || "$connectCloud" =~ ^[Yy]$ ]]; then
+if resolveYesNoSetting connectCloud "Do you want to connect to a personal cloud directory?"; then
 
     # Check if the local cloud directory already exists
     if [[ -d "${localCloudPath}" ]]; then
@@ -154,10 +152,7 @@ if [[ -z "$connectCloud" || "$connectCloud" =~ ^[Yy]$ ]]; then
             logMessage "The local cloud directory is not empty (${localCloudPath})." "WARNING"
 
             # Prompt the user to confirm continuation
-            [[ -n "$continueWithContent" ]] || read -p "Do you want to continue and potentially overwrite existing content? [Y/n]: " 2>&1 continueWithContent
-
-            # Check the user's response (default to 'yes' on Enter)
-            if [[ -z "$continueWithContent" || "$continueWithContent" =~ ^[Yy]$ ]]; then
+            if resolveYesNoSetting continueWithContent "Do you want to continue and potentially overwrite existing content?"; then
 
                 # Set flag to indicate cloud sync should be performed
                 connectPersonalCloud=true
@@ -311,8 +306,8 @@ if [[ "$connectPersonalCloud" == "true" && (-z "$connectMethod" || "$connectMeth
             # Ensure the sync script is executable
             find "${localCloudPath}" -type f -name "nextcloud-sync.sh" -exec chmod +x {} \;
 
-            # Save cloud password securely for reuse if 'pass' is installed
-            if command -v pass &> /dev/null; then
+            # Save cloud password securely for reuse if 'pass' is installed and initialized
+            if command -v pass &> /dev/null && [[ -f "${HOME}/.password-store/.gpg-id" ]]; then
 
                 logMessage "Saving cloud password securely using 'pass'..." "INFO"
 
@@ -323,7 +318,7 @@ if [[ "$connectPersonalCloud" == "true" && (-z "$connectMethod" || "$connectMeth
 
             else
 
-                logMessage "The 'pass' application is not installed. Skipping secure password storage." "WARNING"
+                logMessage "The 'pass' application is not installed or initialized. Skipping secure password storage." "WARNING"
 
             fi
 
@@ -540,10 +535,7 @@ if mountpoint -q "${smbMountPoint}"; then
 else
 
     # Prompt the user for SMB share setup
-    [[ -n "$connectSmb" ]] || read -p "Do you want to set up a mountpoint for an SMB/CIFS share? [Y/n]: " 2>&1 connectSmb
-
-    # Check the user's response
-    if [[ -z "$connectSmb" || "$connectSmb" =~ ^[Yy]$ ]]; then
+    if resolveYesNoSetting connectSmb "Do you want to set up a mountpoint for an SMB/CIFS share?"; then
 
         # Set flag to indicate cloud connection should be performed
         connectSmbShare=true
@@ -795,6 +787,8 @@ else
         eval "${syncCommand}"
 
         # Define the cron job command with log redirection
+        mkdir -p "$HOME/logs"
+
         cronJob="0 * * * * ${syncCommand} >> \"$HOME/logs/rsync.log\" 2>&1"
 
         # Check if the cron job already exists

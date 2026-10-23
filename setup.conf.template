@@ -10,6 +10,21 @@
 # Lines starting with # are comments and will be ignored
 
 # ===================================
+# FEATURE SELECTION
+# ===================================
+# Values: y, Y, yes, n, N, no (case insensitive). Leave unset to be prompted (default yes).
+
+# Set up the SSH server (key-based auth, hardening, firewall rule, keychain)
+setupSsh="y"
+
+# Set up GPG key and 'pass' password manager (independent of SSH).
+# Required for storing GitHub credentials and the Nextcloud password.
+setupGpgPass="y"
+
+# Reboot when setup is done. Leave unset to be prompted (default no).
+rebootAfterSetup="n"
+
+# ===================================
 # PERSONAL CLOUD CONFIGURATION
 # ===================================
 
@@ -66,7 +81,15 @@ smbUsername="user@kexample.com"
 # ===================================
 
 # Local cloud directory path (where personal cloud files are stored locally)
+# NOTE: The dotfiles hardcode ~/cloud/personal, ~/cloud/work and
+# ~/workspace/personal/repos/.dotfiles. The path settings below (localCloudPath,
+# localFromSmbCloudPath, dotfilesCloudPath, personalReposPath) must keep their
+# defaults for the dotfiles setup to work.
 localCloudPath="${HOME}/cloud/personal"
+
+# Path inside the personal cloud that the dotfiles setup links from.
+# Checked before the dotfiles run; the user is warned if it is missing or empty.
+dotfilesCloudPath="${localCloudPath}/setup/dotfiles"
 
 # Local path where SMB cloud files will be accessed/symlinked
 # This creates a local symlink to access the work cloud directory from your home folder

@@ -12,6 +12,7 @@ Legend: solid arrow = hard dependency (step fails or is skipped without it), das
 flowchart TD
     main["linux-setup-and-config.sh<br/>(entry point)"]
     ssh["ssh-setup-and-config.sh"]
+    gpg["gpg-pass-setup-and-config.sh"]
     cloud["cloud-client-setup.sh"]
     conf[("setup.conf<br/>(from setup.conf.template)")]
     logger["utils/logging-and-output-function.sh"]
@@ -22,17 +23,21 @@ flowchart TD
 
     conf --> main
     conf --> ssh
+    conf --> gpg
     conf --> cloud
     logger -.-> main
     logger -.-> ssh
+    logger -.-> gpg
     logger -.-> cloud
     logger -.-> cae
     err -.-> main
     err -.-> ssh
+    err -.-> gpg
     err -.-> cloud
     err -.-> cae
     err -->|sources| logger
     main -->|runLocalScript| ssh
+    main -->|runLocalScript| gpg
     main -->|runLocalScript| cloud
     main -->|cloneAndRunExternalScript| cae
     cae --> dotfiles
@@ -43,7 +48,8 @@ Notes:
 
 - The logger and error handler are optional. Each script falls back to a minimal `logMessage` if the logger is missing (soft dependency). `clone-and-execute-script.sh` has no fallback `logMessage`.
 - `setup.conf` is optional. Any value missing from it is prompted for interactively.
-- `ssh-setup-and-config.sh` and `cloud-client-setup.sh` can also run standalone (`--config`), but then they must install/assume their own prerequisites (see below).
+- `ssh-setup-and-config.sh`, `gpg-pass-setup-and-config.sh` and `cloud-client-setup.sh` can also run standalone (`--config`), but then they must install/assume their own prerequisites (see below).
+- SSH and GPG/pass setup are each optional via `setupSsh` and `setupGpgPass` in `setup.conf` (prompted, default yes, if unset); the cloud script is always run and `connectCloud` / `connectSmb` select its parts. SSH and GPG/pass are independent of each other. All y/n settings are resolved by `resolveYesNoSetting` in [config-helpers.sh](./config-helpers.sh).
 - Child scripts inherit `-d` / `-v` from the main script; they do **not** inherit `--config`. They load the default `setup.conf` next to the script.
 
 ## 2. Execution order in `linux-setup-and-config.sh`
@@ -53,8 +59,9 @@ flowchart TD
     A["Prepare environment<br/>source utils, load setup.conf,<br/>sudo -v, create ~/downloads"]
     B["System upgrade<br/>apt update / upgrade / autoremove"]
     C["Locale setup<br/>en_US, nb_NO"]
-    D["Package install<br/>ufw, zsh, lsd, tmux, fzf, fastfetch,<br/>oh-my-posh, jq, yq, fd-find, bat,<br/>avahi-daemon, python3-libtmux,<br/>git-credential-manager, lazygit"]
-    E["SSH setup<br/>ssh-setup-and-config.sh"]
+    D["Package install<br/>zsh, lsd, tmux, fzf, fastfetch,<br/>oh-my-posh, jq, yq, fd-find, bat,<br/>avahi-daemon, python3-libtmux,<br/>git-credential-manager, lazygit, ufw, keychain"]
+    E["SSH setup (optional)<br/>ssh-setup-and-config.sh"]
+    E2["GPG + pass setup (optional)<br/>gpg-pass-setup-and-config.sh"]
     F["Cloud / SMB setup<br/>cloud-client-setup.sh"]
     G["Dotfiles<br/>clone + deploy-config-linux.sh<br/>then source ~/.env"]
     H["Certificates<br/>copy to /usr/local/share/ca-certificates<br/>+ update-ca-certificates"]
@@ -65,8 +72,9 @@ flowchart TD
 
     A --> B --> C --> D
     D -->|ufw installed| E
-    E -->|pass + GPG key| F
-    E -->|pass + GPG key| I
+    E2 --> F
+    D --> E2
+    E2 -->|pass + GPG key| I
     D -->|git-credential-manager| I
     F -->|~/cloud/work symlink| H
     A -->|personalGithubUser,<br/>personalReposPath| G
@@ -93,14 +101,17 @@ Only the edges above are real data/tool dependencies. Steps without an edge betw
 | Package install (`fastfetch`) | `add-apt-repository` (PPA) | Pre-installed `software-properties-common` (not installed by the script) | Hard |
 | Package install (`fd-find`, `bat`) | `~/.local/bin` | `mkdir -p ~/.local/bin` right before the install loop | Hard |
 | SSH setup | `ufw` | Package install | Soft (firewall rule skipped with a warning if missing) |
-| Cloud setup | `pass` + initialized GPG store | SSH setup | Soft (password not saved if missing; `pass insert` would fail if `pass` is not initialized) |
+| GPG/pass setup | `gpg`, `pass` | Base system, apt | None on SSH setup |
+| Cloud setup | `pass` + initialized GPG store | GPG/pass setup | Soft (password not saved if `pass` is missing or not initialized) |
 | Dotfiles | `personalGithubUser`, `personalReposPath`, `git`, internet | `setup.conf` or prompt | Hard |
+| Dotfiles | Personal cloud dotfiles path (`dotfilesCloudPath`) present with content | Cloud setup (or existing content) | Soft (warns and asks to continue) |
 | Dotfiles | `clone-and-execute-script.sh` | `utils/` | Hard |
 | `source ~/.env` | Dotfiles deployed | Dotfiles | Soft (skipped if missing) |
 | Certificates | `~/cloud/work/setup/certificates` | Cloud setup (SMB mount + symlink) | Soft (skipped if directory missing) |
-| GitHub credentials | `git-credential-manager`, `pass` + GPG key, `personalGithubToken` (`gho_*`) | Package install, SSH setup, `setup.conf` or prompt | Hard for storing; skipped if `~/.password-store` already has a `git` entry or `storeGithubCredentials=n` |
+| GitHub credentials | `git-credential-manager`, `pass` + GPG key, `personalGithubToken` (`gho_*`) | Package install, GPG/pass setup, `setup.conf` or prompt | Hard for storing; skipped if the password store is not initialized, `~/.password-store` already has a `git` entry or `storeGithubCredentials=n` |
 | tmux plugins | `${XDG_CONFIG_HOME}/tmux`, `tmux`, `git` | Dotfiles (`.env` / config), package install | Soft (skipped with warning if the directory is missing) |
 | Default shell | `zsh`, `~/.zshenv` | Package install, Dotfiles | Soft (skipped with warning) |
+| Shell startup (dotfiles `.zshenv`) | `keychain` | Package install | Hard (errors on every shell start if missing and SSH keys or a `pass` store exist) |
 | Reboot prompt | Nothing | n/a | n/a |
 
 ## 4. `ssh-setup-and-config.sh` internals
@@ -110,16 +121,12 @@ flowchart TD
     S0["Prepare: load setup.conf,<br/>detect user + IP, root confirmation"]
     S1["Install + start openssh-server"]
     S2["Firewall rule 22/tcp<br/>(needs ufw)"]
-    S3["Install keychain + pass"]
-    S4["Generate GPG key<br/>(gpg* settings)"]
-    S5["pass init &lt;keyId&gt;"]
     S6["Client key auth<br/>~/.ssh/authorized_keys<br/>(manual ssh-copy-id)"]
     S7["Disable MOTD (PAM)"]
     S8["sshd_config hardening<br/>no root login, no password auth"]
     S9["Restart ssh"]
 
     S0 --> S1 --> S2
-    S0 --> S3 --> S4 --> S5
     S1 --> S6
     S6 -->|must have a working key first| S8
     S7 --> S8
@@ -129,8 +136,9 @@ flowchart TD
 Key points:
 
 - **`sshd_config` hardening must come after a verified client key.** Password login is disabled, so a missing/invalid key locks the user out of SSH. The script waits for a new `ssh-*` line in `authorized_keys` before continuing.
-- **Firewall rule needs `ufw`**, which is installed by the main script, not by this one.
-- **`pass init` needs a GPG key**: an existing key is reused, otherwise one is generated from `gpgKeyType`, `gpgKeyLength`, `gpgNameReal`, `gpgNameEmail`, `gpgExpireDate`.
+- **Firewall rule needs `ufw`**, which is installed by the main script, not by this one. The rule is added whenever SSH setup runs.
+- **`keychain` is not part of this script.** It manages the outgoing SSH agent (and `gpg-agent`) and is installed by the main script. The dotfiles' `keychain-setup.zsh` (sourced from `.zshenv`) calls it unguarded.
+- **GPG/pass is not part of this script.** It lives in `gpg-pass-setup-and-config.sh` and does not depend on SSH. `pass init` needs a GPG key: an existing key is reused, otherwise one is generated from `gpgKeyType`, `gpgKeyLength`, `gpgNameReal`, `gpgNameEmail`, `gpgExpireDate`.
 - **Downstream consumers of `pass`/GPG:** Nextcloud password storage in `cloud-client-setup.sh` and GitHub credential storage via Git Credential Manager in the main script.
 
 ## 5. `cloud-client-setup.sh` internals
@@ -190,11 +198,13 @@ Key points:
 
 | `setup.conf` section | Variables | Consumed by |
 |----------------------|-----------|-------------|
+| Features | `setupSsh`, `setupGpgPass`, `rebootAfterSetup` | `linux-setup-and-config.sh` |
 | Personal cloud | `connectCloud`, `continueWithContent`, `connectMethod` | `cloud-client-setup.sh` |
 | Cloud | `cloudAddress`, `cloudUsername`, `cloudPassword` | `cloud-client-setup.sh` |
 | SMB share | `connectSmb`, `smbHost`, `smbShare`, `smbMountPoint`, `smbUsername`, `smbPassword` | `cloud-client-setup.sh` |
-| Paths | `localCloudPath`, `localFromSmbCloudPath`, `smbCloudPath`, `smbFromLocalCloudPath` | `cloud-client-setup.sh` (the main script's certificate step hardcodes `~/cloud/work/setup/certificates`, which assumes `localFromSmbCloudPath` keeps its default) |
-| GPG | `gpgKeyType`, `gpgKeyLength`, `gpgNameReal`, `gpgNameEmail`, `gpgExpireDate` | `ssh-setup-and-config.sh` |
+| Paths | `localCloudPath`, `localFromSmbCloudPath`, `smbCloudPath`, `smbFromLocalCloudPath` | `cloud-client-setup.sh` (the main script's certificate step hardcodes `~/cloud/work/setup/certificates`, which assumes `localFromSmbCloudPath` keeps its default; the dotfiles also hardcode `~/cloud/personal`, `~/cloud/work` and `~/workspace/personal/repos/.dotfiles`) |
+| Paths | `dotfilesCloudPath` | `linux-setup-and-config.sh` (pre-dotfiles check) |
+| GPG | `gpgKeyType`, `gpgKeyLength`, `gpgNameReal`, `gpgNameEmail`, `gpgExpireDate` | `gpg-pass-setup-and-config.sh` |
 | GitHub | `storeGithubCredentials`, `personalGithubToken` | `linux-setup-and-config.sh` (credentials step) |
 | GitHub | `personalGithubUser`, `personalReposPath` | `linux-setup-and-config.sh` (dotfiles clone, repo paths) |
 
@@ -202,11 +212,10 @@ Key points:
 
 These follow from the dependencies above and are not fixed here.
 
-- **`rsync` is never installed**, yet the cloud copy and cron job need it.
-- **`~/logs` is never created**, but the cron job redirects to `$HOME/logs/rsync.log`.
+- **`rsync` and `cron` are assumed to be present** (standard on Ubuntu), not installed by the scripts. On WSL, cron only runs with systemd enabled.
 - **`software-properties-common`** (provides `add-apt-repository`) is assumed for both `fastfetch` and Nextcloud CLI.
 - **Cloud setup runs before dotfiles**, so anything the dotfiles would put in place (for example `XDG_CONFIG_HOME`) is not available to the cloud script.
-- **`pass` is only initialized if SSH setup completes.** If a GPG key is not created or chosen, both the Nextcloud password store and GitHub credential store lose their backend.
+- **`pass` is only initialized if GPG/pass setup runs and a key is created or chosen.** Otherwise the Nextcloud password store and GitHub credential store lose their backend (both are skipped).
 - **`timestamp` in `ssh-setup-and-config.sh`** is used in the PAM backup file name in the MOTD step before it is assigned later in the SSH configuration step, so that first backup name has no timestamp.
 - **README mismatch:** the README names `install-linux.sh` as the dotfiles script, while the code runs `deploy-config-linux.sh`.
 - **The dotfiles script's own requirements** (for example what it expects from `git-credential-manager` or `pass`) are outside this repo and not covered here.

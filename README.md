@@ -28,6 +28,7 @@ The `linux-setup-deployer` repository provides automation scripts to streamline 
 - Tested on Ubuntu Server and Ubuntu WSL (Windows Subsystem for Linux).
 - May work on most Debian-based distributions (not guaranteed).
 - Sudo privileges for installing software and configuring the system.
+- `rsync` and `cron` (included in standard Ubuntu installs) for the personal cloud to SMB copy. On WSL, cron only runs if systemd is enabled.
 - An active internet connection.
 
 ## Usage/Instructions
@@ -94,6 +95,17 @@ This script:
 - Enables key-based authentication for the current user.
 - Disables root login and password-based authentication.
 - Guides the user through adding their SSH keys.
+
+### gpg-pass-setup-and-config.sh
+
+This script (independent of SSH setup):
+
+- Installs the `pass` password manager.
+- Reuses or generates a GPG key and initializes the password store.
+
+## Configuration
+
+Copy `setup.conf.template` to `setup.conf`. SSH (`setupSsh`) and GPG/pass (`setupGpgPass`) setup are optional, as is the reboot after setup (`rebootAfterSetup`). Cloud parts are selected with `connectCloud` and `connectSmb`. Unset y/n options are prompted for.
 
 ## Notes
 

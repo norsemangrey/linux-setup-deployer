@@ -65,6 +65,7 @@ externalCloneAndExecute=$(dirname "${BASH_SOURCE[0]}")"/utils/clone-and-execute-
 # Source external logger and error handler (but allow execution without them)
 source "${externalErrorHandler}" "Linux setup script failed" || true
 source "${externalLogger}" || true
+source "$(dirname "${BASH_SOURCE[0]}")/config-helpers.sh"
 
 # Verify if logger function exists or sett fallback
 if [[ $(type -t logMessage) != function ]]; then
@@ -530,6 +531,7 @@ declare -a packages=(
     "python3-libtmux"
     "git-credential-manager"
     "lazygit"
+    "keychain"
 )
 
 # Create local bin folder if it does not exist
@@ -545,14 +547,33 @@ done
 # endregion
 
 # =========================
-# === SSH, CLOUD & MOUNT ==
+# === SSH, GPG, CLOUD =====
 # =========================
 # region
 
-# Runs script to configure SSH
-runLocalScript "ssh-setup-and-config"
+# Runs script to configure SSH (includes its UFW rule)
+if resolveYesNoSetting setupSsh "Do you want to set up the SSH server?"; then
 
-# Runs script to configure cloud and network client(s)
+    runLocalScript "ssh-setup-and-config"
+
+else
+
+    logMessage "SSH setup is disabled. Skipping." "INFO"
+
+fi
+
+# Runs script to configure GPG and pass (password store backend)
+if resolveYesNoSetting setupGpgPass "Do you want to set up GPG and the 'pass' password manager?"; then
+
+    runLocalScript "gpg-pass-setup-and-config"
+
+else
+
+    logMessage "GPG/pass setup is disabled. Skipping." "INFO"
+
+fi
+
+# Runs script to configure cloud and network client(s) (each part is optional in the script)
 runLocalScript "cloud-client-setup"
 
 # endregion
@@ -575,6 +596,25 @@ while [[ -z "$personalGithubUser" || -z "$personalReposPath" ]]; do
     [[ -n "$personalReposPath" ]] || read -p "Local Repo Location: " 2>&1 personalReposPath
 
 done
+
+# Dotfiles symlinks depend on this cloud path, even if cloud setup was skipped
+: "${dotfilesCloudPath:=${HOME}/cloud/personal/setup/dotfiles}"
+
+if [[ -z "$(ls -A "${dotfilesCloudPath}" 2>/dev/null)" ]]; then
+
+    logMessage "Dotfiles cloud path '${dotfilesCloudPath}' is missing or empty. Some dotfile symlinks will not work." "WARNING"
+
+    read -r -p "Do you want to run the dotfiles setup anyway? [y/N]: " continueChoice
+
+    if [[ ! "${continueChoice}" =~ ^[Yy]([Ee][Ss])?$ ]]; then
+
+        logMessage "Aborted by user. Exiting setup..." "INFO"
+
+        exit 0
+
+    fi
+
+fi
 
 # Clone and run the dotfiles setup script
 cloneAndRunExternalScript "${personalGithubUser}" ".dotfiles" "deploy-config-linux.sh"
@@ -716,6 +756,13 @@ if ls "$HOME/.password-store" 2>/dev/null | grep -q "git"; then
 
     personalGithubCredentialsStored=true
 
+elif [[ ! -f "$HOME/.password-store/.gpg-id" ]]; then
+
+    # Credentials are stored in 'pass' (GPG), so skip when the password store is not initialized
+    logMessage "Password store is not initialized (GPG/pass setup). Skipping GitHub credential configuration." "WARNING"
+
+    personalGithubCredentialsStored=true
+
 else
 
     personalGithubCredentialsStored=false
@@ -725,13 +772,8 @@ fi
 # Prompt user to configure GitHub credentials for HTTPS access
 while [[ "${personalGithubCredentialsStored}" != "true" ]]; do
 
-    [ -n "$storeGithubCredentials" ] || read -p "Do you want to configure GitHub credentials for HTTPS access? (Y/n): " 2>&1 storeGithubCredentials
-
-    # Set default choice to Y
-    storeGithubCredentials="${storeGithubCredentials:-Y}"
-
     # Check user choice
-    if [[ "${storeGithubCredentials}" =~ ^[Nn]$ ]]; then
+    if ! resolveYesNoSetting storeGithubCredentials "Do you want to configure GitHub credentials for HTTPS access?"; then
 
         logMessage "Skipping GitHub credential configuration." "INFO"
         break
@@ -840,12 +882,8 @@ logMessage "Setup and config script completed."
 
 logMessage "System setup is complete. A reboot is recommended to ensure all changes take effect." "INFO"
 
-# Prompt user for reboot
-read -p "Would you like to reboot the system now? (y/N): " rebootChoice 2>&1
-echo
-
-# Check user choice and reboot if confirmed
-if [[ $rebootChoice =~ ^[Yy]$ ]]; then
+# Check user choice (default no) and reboot if confirmed
+if resolveYesNoSetting rebootAfterSetup "Would you like to reboot the system now?" n; then
 
     logMessage "Rebooting the system..." "INFO"
 
