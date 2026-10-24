@@ -654,7 +654,7 @@ fi
 
 if [[ "${selectedUnavailable}" == "true" ]]; then
 
-    read -r -p "Some selected dotfile paths are unavailable and will not be mapped. Run the dotfiles setup anyway? [y/N]: " continueChoice
+    read -r -p "Some selected dotfile paths are unavailable and will not be mapped. Run the dotfiles setup anyway? [y/N]: " 2>&1 continueChoice
 
     if [[ ! "${continueChoice}" =~ ^[Yy]([Ee][Ss])?$ ]]; then
 

@@ -19,7 +19,8 @@ resolveYesNoSetting() {
     [[ "${defaultAnswer}" =~ ^[Nn]([Oo])?$ ]] && choiceHint="[y/N]"
 
     # Prompt only if not already set (config file or environment)
-    [[ -n "${!settingName}" ]] || read -r -p "${question} ${choiceHint}: " "${settingName}"
+    # 2>&1: the error handler redirects stderr to a file, which would hide the prompt
+    [[ -n "${!settingName}" ]] || read -r -p "${question} ${choiceHint}: " 2>&1 "${settingName}"
 
     printf -v "${settingName}" '%s' "${!settingName:-${defaultAnswer}}"
     export "${settingName}"
