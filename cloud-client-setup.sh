@@ -710,7 +710,7 @@ fi
 if [[ "${noSmbShareMountPoint}" == "true" ]]; then
 
     # Skip symlink creation
-    logMessage "Skipping symlink creation for SMB share directory as no mount point exists." "WARNING"
+    logMessage "Skipping symlink creation for SMB share directory as no mount point exists." "DEBUG"
 
 else
 
@@ -769,7 +769,7 @@ fi
 if [[ "${noSmbShareMountPoint}" == "true" ]]; then
 
     # Skip symlink creation
-    logMessage "Skipping copying of local cloud files to remote host as no mount point exists." "WARNING"
+    logMessage "Skipping copying of local cloud files to remote host as no mount point exists." "DEBUG"
 
 elif ! resolveYesNoSetting setupPersonal "Do you want to set up personal cloud and dotfile paths?"; then
 
