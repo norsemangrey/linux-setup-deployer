@@ -124,10 +124,10 @@ username="${USER}"
 logMessage "Setting up Personal cloud directory..." "INFO"
 
 # Set the path to the cloud storage directory
-[[ -n "$localCloudPath" ]] || localCloudPath="${HOME}/cloud/personal"
-[[ -n "$localFromSmbCloudPath" ]] || localFromSmbCloudPath="${HOME}/cloud/work"
-[[ -n "$smbCloudPath" ]] || smbCloudPath="Cloud/work"
-[[ -n "$smbFromLocalCloudPath" ]] || smbFromLocalCloudPath="Cloud/personal"
+[[ -n "$localCloudPath" ]] || localCloudPath="${HOME}/Cloud/Personal"
+[[ -n "$localFromSmbCloudPath" ]] || localFromSmbCloudPath="${HOME}/Cloud/Work"
+[[ -n "$smbCloudPath" ]] || smbCloudPath="Cloud/Work"
+[[ -n "$smbFromLocalCloudPath" ]] || smbFromLocalCloudPath="Cloud/Personal"
 
 # endregion
 

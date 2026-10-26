@@ -639,8 +639,8 @@ while [[ -z "$personalGithubUser" || -z "$personalReposPath" ]]; do
 done
 
 # Dotfiles map the selected personal and/or work paths, limited to those with content
-: "${dotfilesCloudPath:=${HOME}/cloud/personal/setup/dotfiles}"
-: "${dotfilesWorkPath:=${HOME}/cloud/work/setup/dotfiles}"
+: "${dotfilesCloudPath:=${HOME}/Cloud/Personal/Data/setup/dotfiles}"
+: "${dotfilesWorkPath:=${HOME}/Cloud/Work/setup/dotfiles}"
 
 includePersonal=false
 includeWork=false
@@ -730,7 +730,7 @@ cloneAndRunExternalScript "${personalGithubUser}" ".dotfiles" "deploy-config-lin
 
 # Define certificate search locations
 certificateLocations=(
-    "${HOME}/cloud/work/setup/certificates"
+    "${HOME}/Cloud/Work/setup/certificates"
 )
 certificateDestination="/usr/local/share/ca-certificates"
 
