@@ -462,6 +462,8 @@ run sudo apt-get autoremove -y
 # =========================
 # region
 
+if resolveYesNoSetting setupLocale "Do you want to update the system locales (en_US, nb_NO)?"; then
+
 # Force a safe locale while configuring locales
 export LC_ALL=C
 export LANG=C
@@ -531,6 +533,12 @@ sudo update-locale --reset LANG=en_US.UTF-8 LC_TIME=nb_NO.UTF-8 LC_MONETARY=nb_N
 # Unset temporary overrides
 unset LC_ALL
 unset LANG
+
+else
+
+    logMessage "Locale update is disabled. Skipping." "INFO"
+
+fi
 
 #endregion
 

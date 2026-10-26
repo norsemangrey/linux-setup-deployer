@@ -14,6 +14,9 @@
 # ===================================
 # Values: y, Y, yes, n, N, no (case insensitive). Leave unset to be prompted (default yes).
 
+# Update system locales (generate en_US/nb_NO and set en_US language with nb_NO regional formats)
+setupLocale="y"
+
 # Set up the SSH server (key-based auth, hardening, firewall rule, keychain)
 setupSsh="y"
 

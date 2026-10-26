@@ -49,7 +49,7 @@ Notes:
 - The logger and error handler are optional. Each script falls back to a minimal `logMessage` if the logger is missing (soft dependency). `clone-and-execute-script.sh` has no fallback `logMessage`.
 - `setup.conf` is optional. Any value missing from it is prompted for interactively.
 - `ssh-setup-and-config.sh`, `gpg-pass-setup-and-config.sh` and `cloud-client-setup.sh` can also run standalone (`--config`), but then they must install/assume their own prerequisites (see below).
-- SSH, GPG/pass, personal and work setup are each optional via `setupSsh`, `setupGpgPass`, `setupPersonal` and `setupWork` in `setup.conf` (prompted, default yes, if unset). `setupPersonal` / `setupWork` gate the personal cloud / SMB mount and the matching dotfile paths; `connectCloud` / `connectSmb` remain as sub-options inside them. SSH and GPG/pass are independent of each other. All y/n settings are resolved by `resolveYesNoSetting` in [config-helpers.sh](./config-helpers.sh).
+- Locale update, SSH, GPG/pass, personal and work setup are each optional via `setupLocale`, `setupSsh`, `setupGpgPass`, `setupPersonal` and `setupWork` in `setup.conf` (prompted, default yes, if unset). `setupPersonal` / `setupWork` gate the personal cloud / SMB mount and the matching dotfile paths; `connectCloud` / `connectSmb` remain as sub-options inside them. SSH and GPG/pass are independent of each other. All y/n settings are resolved by `resolveYesNoSetting` in [config-helpers.sh](./config-helpers.sh).
 - Child scripts inherit `-d` / `-v` from the main script; they do **not** inherit `--config`. They load the default `setup.conf` next to the script.
 
 ## 2. Execution order in `linux-setup-and-config.sh`
@@ -58,7 +58,7 @@ Notes:
 flowchart TD
     A["Prepare environment<br/>source utils, load setup.conf,<br/>sudo -v, create ~/downloads"]
     B["System upgrade<br/>apt update / upgrade / autoremove"]
-    C["Locale setup<br/>en_US, nb_NO"]
+    C["Locale setup (optional)<br/>en_US, nb_NO"]
     D["Package install<br/>zsh, lsd, tmux, fzf, fastfetch,<br/>oh-my-posh, jq, yq, fd-find, bat,<br/>avahi-daemon, python3-libtmux,<br/>git-credential-manager, lazygit, ufw, keychain,<br/>FiraCode Nerd Font"]
     E["SSH setup (optional)<br/>ssh-setup-and-config.sh"]
     E2["GPG + pass setup (optional)<br/>gpg-pass-setup-and-config.sh"]
@@ -200,7 +200,7 @@ Key points:
 
 | `setup.conf` section | Variables | Consumed by |
 |----------------------|-----------|-------------|
-| Features | `setupSsh`, `setupGpgPass`, `setupPersonal`, `setupWork`, `rebootAfterSetup` | `linux-setup-and-config.sh` (`setupPersonal`, `setupWork` also `cloud-client-setup.sh`) |
+| Features | `setupLocale`, `setupSsh`, `setupGpgPass`, `setupPersonal`, `setupWork`, `rebootAfterSetup` | `linux-setup-and-config.sh` (`setupPersonal`, `setupWork` also `cloud-client-setup.sh`) |
 | Personal cloud | `connectCloud`, `continueWithContent`, `connectMethod` | `cloud-client-setup.sh` |
 | Cloud | `cloudAddress`, `cloudUsername`, `cloudPassword` | `cloud-client-setup.sh` |
 | SMB share | `connectSmb`, `smbHost`, `smbShare`, `smbMountPoint`, `smbUsername`, `smbPassword` | `cloud-client-setup.sh` |

@@ -106,7 +106,7 @@ This script (independent of SSH setup):
 
 ## Configuration
 
-Copy `setup.conf.template` to `setup.conf`. SSH (`setupSsh`), GPG/pass (`setupGpgPass`), personal (`setupPersonal`) and work (`setupWork`) setup are optional, as is the reboot after setup (`rebootAfterSetup`). Personal and work cover both the cloud/SMB setup and the matching dotfile paths. Unset y/n options are prompted for.
+Copy `setup.conf.template` to `setup.conf`. Locale update (`setupLocale`), SSH (`setupSsh`), GPG/pass (`setupGpgPass`), personal (`setupPersonal`) and work (`setupWork`) setup are optional, as is the reboot after setup (`rebootAfterSetup`). Personal and work cover both the cloud/SMB setup and the matching dotfile paths. Unset y/n options are prompted for.
 
 ## Notes
 
