@@ -798,9 +798,9 @@ else
         eval "${syncCommand}"
 
         # Define the cron job command with log redirection
-        mkdir -p "$HOME/logs"
+        mkdir -p "$HOME/Logs"
 
-        cronJob="0 * * * * ${syncCommand} >> \"$HOME/logs/rsync.log\" 2>&1"
+        cronJob="0 * * * * ${syncCommand} >> \"$HOME/Logs/rsync.log\" 2>&1"
 
         # Check if the cron job already exists
         if crontab -l 2>/dev/null | grep -Fq "${cronJob}"; then

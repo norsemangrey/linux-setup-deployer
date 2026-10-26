@@ -142,7 +142,7 @@ if [ $? -ne 0 ]; then
 fi
 
 # Create downloads directory for temporary files
-export DOWNLOADS="${HOME}/downloads"
+export DOWNLOADS="${HOME}/Downloads"
 mkdir -p "${DOWNLOADS}"
 
 # endregion
