@@ -59,7 +59,7 @@ flowchart TD
     A["Prepare environment<br/>source utils, load setup.conf,<br/>sudo -v, create ~/downloads"]
     B["System upgrade<br/>apt update / upgrade / autoremove"]
     C["Locale setup<br/>en_US, nb_NO"]
-    D["Package install<br/>zsh, lsd, tmux, fzf, fastfetch,<br/>oh-my-posh, jq, yq, fd-find, bat,<br/>avahi-daemon, python3-libtmux,<br/>git-credential-manager, lazygit, ufw, keychain"]
+    D["Package install<br/>zsh, lsd, tmux, fzf, fastfetch,<br/>oh-my-posh, jq, yq, fd-find, bat,<br/>avahi-daemon, python3-libtmux,<br/>git-credential-manager, lazygit, ufw, keychain,<br/>FiraCode Nerd Font"]
     E["SSH setup (optional)<br/>ssh-setup-and-config.sh"]
     E2["GPG + pass setup (optional)<br/>gpg-pass-setup-and-config.sh"]
     F["Cloud / SMB setup<br/>cloud-client-setup.sh"]
@@ -98,6 +98,7 @@ Only the edges above are real data/tool dependencies. Steps without an edge betw
 | Everything using `sudo` | Valid sudo session | `sudo -v` at start | Hard (script exits if it fails) |
 | Package install | Up-to-date package lists | System upgrade | Soft |
 | Package install (`git-credential-manager`, `lazygit`) | `${DOWNLOADS}`, `curl`, `wget` | Prepare environment (`~/downloads`) | Hard |
+| Package install (`firacode-nerd-font`) | `${DOWNLOADS}`, `wget`, `tar` with xz support | Prepare environment (`~/downloads`), base system | Soft (failure is logged and skipped; already-extracted font is skipped; `fc-cache` is only run if fontconfig exists) |
 | Package install (`fastfetch`) | `add-apt-repository` (PPA) | Pre-installed `software-properties-common` (not installed by the script) | Hard |
 | Package install (`fd-find`, `bat`) | `~/.local/bin` | `mkdir -p ~/.local/bin` right before the install loop | Hard |
 | SSH setup | `ufw` | Package install | Soft (firewall rule skipped with a warning if missing) |
@@ -187,6 +188,7 @@ Key points:
 | `oh-my-posh` | Binary download (`wget`) to `/usr/local/bin` | `chmod +x` |
 | `git-credential-manager` | GitHub releases API (`curl`) and `.deb` download, `dpkg -i` | Delete `.deb` |
 | `lazygit` | GitHub releases API (`curl`) and tarball download | Installed to `/usr/local/bin` |
+| `firacode-nerd-font` | `FiraCode.tar.xz` download (`wget`) from the Nerd Fonts releases | Extracted to `~/.local/share/fonts/FiraCodeNerdFont`, `fc-cache -f` if available, archive deleted |
 | `fd-find` | `~/.local/bin` | Symlink `fdfind` to `fd` |
 | `bat` | `~/.local/bin` | Symlink `batcat` to `bat` |
 | `avahi-daemon` | `systemd` | `systemctl enable --now` |

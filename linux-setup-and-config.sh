@@ -252,6 +252,21 @@ alternativeInstallationActions() {
             return 0
             ;;
 
+        "firacode-nerd-font")
+
+            # Not an apt package, so skip the download if the font is already extracted
+            [[ -n "$(ls -A "${HOME}/.local/share/fonts/FiraCodeNerdFont" 2>/dev/null)" ]] && return 0
+
+            # Download the latest FiraCode Nerd Font release
+            wget https://github.com/ryanoasis/nerd-fonts/releases/latest/download/FiraCode.tar.xz -O ${DOWNLOADS}/FiraCode.tar.xz || return 2
+
+            # Extract into a user font directory
+            mkdir -p "${HOME}/.local/share/fonts/FiraCodeNerdFont" || return 2
+            tar -xJf ${DOWNLOADS}/FiraCode.tar.xz -C "${HOME}/.local/share/fonts/FiraCodeNerdFont" || return 2
+
+            return 0
+            ;;
+
         *)
             return 1
             ;;
@@ -331,6 +346,16 @@ postInstallationActions() {
 
             # Configure Git Credential Manager
             #git-credential-manager configure
+
+            ;;
+
+        "firacode-nerd-font")
+
+            # Remove downloaded archive
+            rm -f ${DOWNLOADS}/FiraCode.tar.xz
+
+            # Refresh the font cache (fontconfig may be missing on minimal headless installs)
+            command -v fc-cache &> /dev/null && fc-cache -f "${HOME}/.local/share/fonts/FiraCodeNerdFont" || true
 
             ;;
 
@@ -532,6 +557,7 @@ declare -a packages=(
     "git-credential-manager"
     "lazygit"
     "keychain"
+    "firacode-nerd-font"
 )
 
 # Create local bin folder if it does not exist

@@ -15,6 +15,7 @@ The `linux-setup-deployer` repository provides automation scripts to streamline 
     | LSDeluxe (lsd)  | Improved directory listings                |
     | Fastfetch       | System information fetch tool              |
     | JQuery (jq)     | JSON parsing utility                       |
+    | FiraCode Nerd Font | Terminal font with prompt/icon glyphs (used by desktop terminals) |
 
   These tools are selected based on personal preferences and compatibility with both Linux and Windows environments. They might not suit everyone, so feel free to modify the script.
 - Sets up and secures an SSH server with key-based authentication (requires copying the public key to the server).
