@@ -111,7 +111,9 @@ Copy `setup.conf.template` to `setup.conf`. Locale update (`setupLocale`), SSH (
 ## Notes
 
 - Run scripts as a non-root user with sudo privileges.
-- Ensure all external utilities (`logging-and-output-function.sh`, `error-handling-function.sh`, `clone-and-execute-script.sh`) are available in the `utils` directory.
+- Ensure all external utilities (`logging-and-output-function.sh`, `error-handling-function.sh`, `platform.sh`, `clone-and-execute-script.sh`) are available in the `utils` directory.
+- The setup script sources [platform detection](./utils/platform.sh) directly after loading configuration, preserving explicit platform/environment overrides.
+- Test platform integration with `bash tests/linux-setup-platform-test.sh` and shared detection with `bash utils/tests/platform-test.sh`.
 - The repository includes submodules for helper functions like logging and error handling, which are integral to the scripts.
 - Modify the scripts as needed for compatibility with non-Ubuntu Debian-based systems.
 

@@ -18,6 +18,7 @@ flowchart TD
     logger["utils/logging-and-output-function.sh"]
     err["utils/error-handling-function.sh"]
     cae["utils/clone-and-execute-script.sh"]
+    platform["utils/platform.sh<br/>(shared Bash utilities)"]
     dotfiles["GitHub: &lt;user&gt;/.dotfiles<br/>deploy-config-linux.sh"]
     tpm["GitHub: tmux-plugins/tpm<br/>bin/install_plugins"]
 
@@ -42,11 +43,14 @@ flowchart TD
     main -->|cloneAndRunExternalScript| cae
     cae --> dotfiles
     cae --> tpm
+    platform --> main
+    platform -->|utils/bash submodule| dotfiles
 ```
 
 Notes:
 
 - The logger and error handler are optional. Each script falls back to a minimal `logMessage` if the logger is missing (soft dependency). `clone-and-execute-script.sh` has no fallback `logMessage`.
+- Both entry scripts source the shared platform utility directly through `externalPlatform`. The setup script loads it after configuration to preserve overrides; the dotfiles script loads it before selecting `.env.linux` or `.env.wsl`. Missing platform detection stops deployment.
 - `setup.conf` is optional. Any value missing from it is prompted for interactively.
 - `ssh-setup-and-config.sh`, `gpg-pass-setup-and-config.sh` and `cloud-client-setup.sh` can also run standalone (`--config`), but then they must install/assume their own prerequisites (see below).
 - Locale update, SSH, GPG/pass, personal and work setup are each optional via `setupLocale`, `setupSsh`, `setupGpgPass`, `setupPersonal` and `setupWork` in `setup.conf` (prompted, default yes, if unset). `setupPersonal` / `setupWork` gate the personal cloud / SMB mount and the matching dotfile paths; `connectCloud` / `connectSmb` remain as sub-options inside them. SSH and GPG/pass are independent of each other. All y/n settings are resolved by `resolveYesNoSetting` in [config-helpers.sh](./config-helpers.sh).
@@ -112,7 +116,8 @@ Only the edges above are real data/tool dependencies. Steps without an edge betw
 | GitHub credentials | `git-credential-manager`, `pass` + GPG key, `personalGithubToken` (`gho_*`) | Package install, GPG/pass setup, `setup.conf` or prompt | Hard for storing; skipped if the password store is not initialized, `~/.password-store` already has a `git` entry or `storeGithubCredentials=n` |
 | tmux plugins | `${XDG_CONFIG_HOME}/tmux`, `tmux`, `git` | Dotfiles (`.env` / config), package install | Soft (skipped with warning if the directory is missing) |
 | Default shell | `zsh`, `~/.zshenv` | Package install, Dotfiles | Soft (skipped with warning) |
-| Shell startup (dotfiles `.zshenv`) | `keychain` | Package install | Hard (errors on every shell start if missing and SSH keys or a `pass` store exist) |
+| Platform detection | `utils/platform.sh` (dotfiles: `utils/bash/platform.sh`) | Initialized Bash utilities submodule; sourced directly by each entry script | Hard |
+| Interactive terminal startup (dotfiles `.zshrc`) | `keychain`, a terminal | Package install, SSH/console/desktop terminal | Required for loading configured keys; non-interactive `.zshenv` startup does not invoke keychain or `tty` |
 | Reboot prompt | Nothing | n/a | n/a |
 
 ## 4. `ssh-setup-and-config.sh` internals
@@ -138,7 +143,7 @@ Key points:
 
 - **`sshd_config` hardening must come after a verified client key.** Password login is disabled, so a missing/invalid key locks the user out of SSH. The script waits for a new `ssh-*` line in `authorized_keys` before continuing.
 - **Firewall rule needs `ufw`**, which is installed by the main script, not by this one. The rule is added whenever SSH setup runs.
-- **`keychain` is not part of this script.** It manages the outgoing SSH agent (and `gpg-agent`) and is installed by the main script. The dotfiles' `keychain-setup.zsh` (sourced from `.zshenv`) calls it unguarded.
+- **`keychain` is not part of this script.** It manages the outgoing SSH agent (and `gpg-agent`) and is installed by the main script. The dotfiles' `.zshrc` sources `keychain-setup.zsh` only in interactive shells with terminal input and output, after setting `GPG_TTY`.
 - **GPG/pass is not part of this script.** It lives in `gpg-pass-setup-and-config.sh` and does not depend on SSH. `pass init` needs a GPG key: an existing key is reused, otherwise one is generated from `gpgKeyType`, `gpgKeyLength`, `gpgNameReal`, `gpgNameEmail`, `gpgExpireDate`.
 - **Downstream consumers of `pass`/GPG:** Nextcloud password storage in `cloud-client-setup.sh` and GitHub credential storage via Git Credential Manager in the main script.
 

@@ -57,9 +57,10 @@ done
 
 # INFRASTRUCTURE SETUP
 
-# Set external logger- and error handling script paths
+# Set external utility script paths
 externalLogger=$(dirname "${BASH_SOURCE[0]}")"/utils/logging-and-output-function.sh"
 externalErrorHandler=$(dirname "${BASH_SOURCE[0]}")"/utils/error-handling-function.sh"
+externalPlatform=$(dirname "${BASH_SOURCE[0]}")"/utils/platform.sh"
 externalCloneAndExecute=$(dirname "${BASH_SOURCE[0]}")"/utils/clone-and-execute-script.sh"
 
 # Source external logger and error handler (but allow execution without them)
@@ -122,8 +123,11 @@ else
 
 fi
 
-# PLATFORM DETECTION (see platform.sh)
-source "$(dirname "${BASH_SOURCE[0]}")/platform.sh"
+# Source platform detection after configuration so explicit overrides are preserved.
+if ! source "${externalPlatform}"; then
+    logMessage "Unable to load platform detection. Initialize the utils submodule." "ERROR"
+    exit 1
+fi
 
 logMessage "Platform: '${platform}', environment: '${environment}'." "INFO"
 
