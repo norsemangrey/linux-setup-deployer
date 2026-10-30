@@ -202,21 +202,32 @@ if [[ "$connectPersonalCloud" == "true" && (-z "$connectMethod" || "$connectMeth
     # ===================================
     # region
 
+    # Set flag to indicate whether the Nextcloud CLI is available
+    nextcloudAvailable=true
+
     # Check and install Nextcloud CLI
     if ! command -v nextcloudcmd &> /dev/null; then
 
         logMessage "Installing Nextcloud CLI..." "INFO"
 
         # Add Nextcloud repository
-        run sudo add-apt-repository -y ppa:nextcloud-devs/client
+        run sudo add-apt-repository -y ppa:nextcloud-devs/client || logMessage "Failed to add Nextcloud repository. Continuing with default sources..." "WARNING"
 
         # Update package lists
-        run sudo apt-get update
+        run sudo apt-get update || logMessage "Failed to update package lists. Continuing..." "WARNING"
 
-        # Installing Nextcloud CLI (run non-interactively)
-        run sudo apt-get install -y nextcloud-client
+        # Install the CLI-only package (provides nextcloudcmd)
+        if run sudo apt-get install -y nextcloud-desktop-cmd; then
 
-        logMessage "Nextcloud CLI installed successfully." "DEBUG"
+            logMessage "Nextcloud CLI installed successfully." "DEBUG"
+
+        else
+
+            nextcloudAvailable=false
+
+            logMessage "Failed to install Nextcloud CLI. Skipping cloud directory sync." "WARNING"
+
+        fi
 
     else
 
@@ -232,7 +243,7 @@ if [[ "$connectPersonalCloud" == "true" && (-z "$connectMethod" || "$connectMeth
     # region
 
     # Check if there is a .sync_*.db file in the root of the local cloud directory
-    if [[ "${continueWithContent}" == "true" && ! $(ls "${localCloudPath}"/.sync_*.db 1> /dev/null 2>&1) ]]; then
+    if [[ "${nextcloudAvailable}" == "true" && "${continueWithContent}" == "true" && ! $(ls "${localCloudPath}"/.sync_*.db 1> /dev/null 2>&1) ]]; then
 
         logMessage "The local directory has content but no sync file." "WARNING"
 
@@ -254,7 +265,11 @@ if [[ "$connectPersonalCloud" == "true" && (-z "$connectMethod" || "$connectMeth
     # region
 
     # Check the user's response
-    if [[ -z "$continueSync" || "$continueSync" =~ ^[Yy]$ ]]; then
+    if [[ "${nextcloudAvailable}" != "true" ]]; then
+
+        logMessage "Nextcloud CLI is not available. Skipping cloud directory sync..." "WARNING"
+
+    elif [[ -z "$continueSync" || "$continueSync" =~ ^[Yy]$ ]]; then
 
         logMessage "Configuring sync command..." "INFO"
 
@@ -341,6 +356,9 @@ if [[ "$connectPersonalCloud" == "true" && ("$connectMethod" =~ ^[Mm]$) ]]; then
 
     logMessage "Starting WebDav client setup and cloud directory mount..." "INFO"
 
+    # Set flag to indicate whether the WebDav client is available
+    davfsAvailable=true
+
     # ===================================
     # === INSTALL WEBDAV CLIENT =========
     # ===================================
@@ -360,12 +378,20 @@ if [[ "$connectPersonalCloud" == "true" && ("$connectMethod" =~ ^[Mm]$) ]]; then
         echo davfs2 davfs2/use_locks boolean true | sudo debconf-set-selections
 
         # Installing DAVFS2 (run non-interactively)
-        run sudo apt-get install -y davfs2
+        if run sudo apt-get install -y davfs2; then
 
-        logMessage "WebDav Client (davfs2) installed successfully." "DEBUG"
+            logMessage "WebDav Client (davfs2) installed successfully." "DEBUG"
 
-        # Add user to the davfs2 group
-        sudo usermod -aG davfs2 "${username}"
+            # Add user to the davfs2 group
+            sudo usermod -aG davfs2 "${username}"
+
+        else
+
+            davfsAvailable=false
+
+            logMessage "Failed to install WebDav Client (davfs2). Skipping WebDav mount." "WARNING"
+
+        fi
 
     else
 
@@ -374,6 +400,11 @@ if [[ "$connectPersonalCloud" == "true" && ("$connectMethod" =~ ^[Mm]$) ]]; then
     fi
 
     # endregion
+
+fi
+
+# Skip the configuration and mount if the WebDav client could not be installed
+if [[ "$connectPersonalCloud" == "true" && ("$connectMethod" =~ ^[Mm]$) && "${davfsAvailable}" == "true" ]]; then
 
     # ===================================
     # === CHECK WEBDAV CONFIGURATION ====
@@ -577,9 +608,18 @@ if [[ "$connectSmbShare" == "true" ]]; then
         logMessage "Installing CIFS Share Utilities (cifs-utils)..." "INFO"
 
         # Installing cifs-utils (run non-interactively)
-        run sudo apt-get install -y cifs-utils
+        if run sudo apt-get install -y cifs-utils; then
 
-        logMessage "CIFS Share Utilities (cifs-utils) installed successfully." "DEBUG"
+            logMessage "CIFS Share Utilities (cifs-utils) installed successfully." "DEBUG"
+
+        else
+
+            connectSmbShare=false
+            noSmbShareMountPoint=true
+
+            logMessage "Failed to install CIFS Share Utilities (cifs-utils). Skipping SMB share mount." "WARNING"
+
+        fi
 
     else
 
@@ -588,6 +628,11 @@ if [[ "$connectSmbShare" == "true" ]]; then
     fi
 
     # endregion
+
+fi
+
+# Skip the mount if the CIFS utilities could not be installed
+if [[ "$connectSmbShare" == "true" ]]; then
 
     # ===================================
     # === SMB SHARE MOUNT POINT =========

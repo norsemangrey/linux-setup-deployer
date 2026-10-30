@@ -154,7 +154,7 @@ flowchart TD
     C0["Prepare: load setup.conf,<br/>default paths"]
     C1{"connectCloud = y<br/>and localCloudPath empty<br/>or continueWithContent = y?"}
     C2{"connectMethod"}
-    C3["Install nextcloud-client<br/>nextcloudcmd sync"]
+    C3["Install nextcloud-desktop-cmd<br/>nextcloudcmd sync"]
     C4["Install davfs2<br/>secrets + fstab + mount"]
     C5["Store password in pass<br/>nextcloud/&lt;user&gt;"]
     C6{"connectSmb = y<br/>and mount point not mounted?"}
